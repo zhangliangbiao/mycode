@@ -2,7 +2,7 @@ package com.id.zlb.spring.vo;
 
 import java.io.Serializable;
 /**
- * person�?
+ * person
  * @author idzhangliangbiao
  *
  */
