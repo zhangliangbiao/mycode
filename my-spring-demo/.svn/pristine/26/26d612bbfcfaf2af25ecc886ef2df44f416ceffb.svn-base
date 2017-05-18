@@ -1,0 +1,150 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.user.entity.SysDepart;
+
+/**
+ * @author WangShuo *
+ * @version 1.0 *
+ * @date 创建时间：2016年1月13日 下午3:01:08 *
+ * @instruction 说明：
+ */
+public interface HouseMapper extends Mapper<House> {
+
+    @SuppressWarnings("rawtypes")
+    public void updateHouseFromGeneralContract(Map map);
+
+    /**
+     * 根据楼盘id判断出租房源是否用了楼盘字典
+     *
+     * @param residential_id
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    public Integer checkIsUseRedidential(Map map);
+
+    /**
+     * 根据查询条件返回楼盘房屋信息列表
+     *
+     * @param data
+     * @return List<TtHouse>
+     */
+    public List<House> searchHouseList(Map<String, Object> data);
+
+    /**
+     * 根据查询条件返回楼盘房屋信息记录总数
+     *
+     * @param data
+     * @return Integer
+     */
+    public Integer countSearchHouse(Map<String, Object> data);
+
+    /**
+     * 新增房屋信息
+     *
+     * @param house
+     */
+    public void insertHouse(House house);
+
+    /**
+     * 根据房屋ID返回房屋信息
+     *
+     * @param house_id
+     * @return TtHouse
+     */
+    public House selectByHouseId(String house_id);
+
+    /**
+     * 根据楼盘ID、栋座ID、城、区、单元、层、房号返回房屋信息
+     *
+     * @param house
+     * @return House
+     */
+    public House selectByHouse(House house);
+
+    /**
+     * 判断楼层是否已使用
+     *
+     * @param map
+     * @return
+     */
+    public Integer isUse4Residential(Map<String, Object> map);
+
+    /**
+     * 根据房源ID返回房源信息
+     *
+     * @param houseId
+     * @return Map<String, Object>
+     */
+    public Map<String, Object> searchApiHouse(String houseId);
+
+    /**
+     * 根据roomId返回房源信息
+     *
+     * @param roomId
+     * @return Map<String, Object>
+     */
+    public Map<String, Object> searchApiApartment(String roomId);
+
+    /**
+     * 查询楼盘字典责任部门
+     *
+     * @param building_id
+     * @return
+     */
+    public List<SysDepart> searchResidentialBuildingDepIdByBuildingId(String building_id);
+
+    /**
+     * 查询租赁组部门depIds
+     *
+     * @param data
+     * @return
+     */
+    public String getRentChildDepIds(Map<String, String> data);
+
+    /**
+     * 更新官网维护人
+     *
+     * @param houseId
+     * @param user_id
+     */
+    public void updateWebMangerUidByWeb(String houseId, String user_id);
+
+    /**
+     * 预定房源 普单列表
+     *
+     * @param pageData
+     * @return List<Map<String,Object>>
+     */
+    public List<Map<String, Object>> searchBookAvailabilityHouseList(Map<String, Object> pageData);
+
+    /**
+     * 预定房源 普单列表总数
+     *
+     * @param pageData
+     * @return Integer
+     */
+    public Integer countSearchBookAvailabilityHouse(Map<String, Object> pageData);
+
+    public Integer searchHouseListCountBySolr();
+
+    public List<House> searchHouseListBySolr(Map<String, Object> params);
+
+    public Integer searchHouseUpdateListCountBySolr();
+
+    public List<House> searchHouseUpdateListBySolr();
+
+    public List<House> searchHouseDeleteListBySolr();
+
+    public Integer searchHouseDeleteListALLCountBySolr();
+
+    public List<String> searchHouseDeleteListALLBySolr(Map<String, Object> params);
+
+    public String getWebManagerUidByHouseId(String houseId);
+
+    public List<House> selectListByMap(Map<String,Object> pageData);
+}

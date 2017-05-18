@@ -1,0 +1,73 @@
+package com.isz.erp.house.service.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.IszLogger;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.house.entity.ApplyPhoto;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.HouseExploration;
+import com.isz.erp.facade.house.entity.HouseExplorationImg;
+import com.isz.erp.facade.house.entity.OnlineHouseInfo;
+import com.isz.erp.facade.house.service.HouseExplorationService;
+import com.isz.erp.facade.house.service.OnlineHouseService;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.biz.HouseExplorationServiceBiz;
+import com.isz.erp.house.biz.OnlineHouseServiceBiz;
+
+/**
+ * 实勘接口实现
+ *
+ * @author hjj 
+ * @version 1.0 *
+ * @date 创建时间：2016年7月7日 下午3:36:03
+ * @instruction 说明：
+ */
+@Service("houseExplorationServiceFacade")
+public class HouseExplorationServiceFacade implements HouseExplorationService {
+
+    @Autowired
+    private HouseExplorationServiceBiz houseExplorationServiceBiz;
+
+	@Override
+	public ResultMsg saveHouseExploration(HouseExploration houseExploration,
+			SessionVo sessionVo) {
+		return houseExplorationServiceBiz.saveHouseExploration(houseExploration,sessionVo);
+	}
+
+	@Override
+	public ResultMsg saveHouseExplorationImg(
+			HouseExplorationImg houseExplorationImg, SessionVo session) {
+		return houseExplorationServiceBiz.saveHouseExplorationImg(houseExplorationImg,session);
+	}
+
+	@Override
+	public ResultObjectMsg<PagingHelper<HouseExploration>> searchHouseExplorationList(Map<String, Object> pageData,
+			SessionVo sessions) {
+		return houseExplorationServiceBiz.searchHouseExplorationList(pageData,sessions);
+	}
+
+	@Override
+	public ResultObjectMsg<List<HouseExplorationImg>> selectHouseExplorationImgList(Map<String, Object> pageData,
+			SessionVo sessions) {
+		return houseExplorationServiceBiz.selectHouseExplorationImgList(pageData,
+				 sessions);
+	}
+	
+	@Override
+	public ResultMsg deleteHouseExploration(Map<String, Object> pageData){
+		return houseExplorationServiceBiz.deleteHouseExploration(pageData);
+	}
+	
+	@Override
+	public ResultMsg auditHouseExploration(Map<String, Object> pageData){
+		return houseExplorationServiceBiz.auditHouseExploration(pageData);
+	}
+}

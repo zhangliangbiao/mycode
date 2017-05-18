@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.HouseDevelopRelationMapper">
+ 	<!-- 插入 -->
+	<insert id="insertHouseDevelopRelation" parameterType="com.isz.erp.facade.house.entity.HouseDevelopRelation">
+		INSERT INTO `house_develop_relation` 
+			(`house_develop_id`, `house_id`, `create_time`, `create_uid`) 
+		VALUES
+     	   (#{house_develop_id},#{house_id},#{create_time},#{create_uid})  
+  	</insert>
+  	<!-- 查询 -->
+  	<select id="selectByHouseDevelopRelation" parameterType="com.isz.erp.facade.house.entity.HouseDevelopRelation" resultType="com.isz.erp.facade.house.entity.HouseDevelopRelation">
+  		SELECT house_develop_id,house_id,create_time,create_uid FROM `house_develop_relation` 
+  		<where>
+			<trim prefixOverrides="and">
+				<if test="null != house_develop_id">AND `house_develop_id`=#{house_develop_id}</if>
+				<if test="null != house_id">AND `house_id`=#{house_id}</if>
+			</trim>
+		</where>
+  	</select>
+  	<!-- 删除 -->
+  	<delete id="deleteByRelation" parameterType="com.isz.erp.facade.house.entity.HouseDevelopRelation">
+  		DELETE FROM `house_develop_relation` 
+  		WHERE `house_develop_id`=#{house_develop_id} AND `house_id`=#{house_id}
+  	</delete>
+</mapper>

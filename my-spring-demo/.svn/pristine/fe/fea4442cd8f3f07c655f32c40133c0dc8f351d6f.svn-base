@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.ResidentialImgMapper">
+	
+	<!-- 保存楼盘和图片关系 -->
+	<insert id="saveResidentialImg" useGeneratedKeys="true" parameterType="java.util.List">
+        INSERT INTO residential_img (residential_img_id, img_id, residential_id, img_name, create_time, create_uid,sort)
+        VALUES 
+        <foreach collection="list" item="item" index="index" separator="," >  
+     	   (#{item.residential_img_id},#{item.img_id},#{item.residential_id},#{item.img_name},now(),#{item.create_uid},#{item.sort})  
+   		</foreach>  
+  </insert>
+  
+  <!-- 根据楼盘id删除楼盘和商圈关系 -->
+    <delete id="deleteImgByPremisesId" parameterType="java.lang.String">
+       DELETE FROM residential_img WHERE residential_id = #{residential_id};
+    </delete>
+</mapper>

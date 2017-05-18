@@ -1,0 +1,20 @@
+package com.isz.erp.house.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.facade.house.service.HouseRolesService;
+import com.isz.erp.house.biz.HouseRolesBiz;
+
+@Service("houseRolesServiceFacade")
+public class HouseRolesServiceFacade implements HouseRolesService{
+	@Autowired
+	private HouseRolesBiz houseRolesBiz;
+	
+	@Override
+	public ResultMsg HouseContractEnd(String house_id, String end_uid) {
+		return houseRolesBiz.HouseContractEnd(house_id, end_uid);
+	}
+
+}

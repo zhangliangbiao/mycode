@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.ApartmentContractVoMapper">
+	<!-- 公寓相关 有效或未生效 -->
+	<select id="selectByHouseInfo" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.vo.ApartmentContractVo">
+		SELECT
+			acr.apartment_id,
+			acr.contract_id,
+			acr.house_id,
+			acr.room_id,
+			ac.contract_num,
+			ac.rent_start_date,
+			ac.rent_end_date,
+			cp.customer_name,
+			cp.gender,
+			cp.phone
+			FROM apartment_contract_relation acr
+			INNER JOIN apartment_contract ac ON acr.contract_id=ac.contract_id
+			INNER JOIN customer_person cp ON cp.person_id=ac.person_id
+		WHERE 
+			ac.deleted=0 AND acr.house_id=#{house_id}
+			<if test="null != room_id and '' != room_id">AND acr.room_id=#{room_id}</if>
+	</select>
+	
+	<!--  -->
+	<select id="selectApartmentContractList" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.vo.ApartmentContractVo">
+		SELECT
+			ac.sign_date,
+			su.user_name,
+			sd.dep_name,
+			ac.contract_num,
+			ac.rent_start_date,
+			ac.rent_end_date,
+			cp.customer_name,
+			ac.contract_status,
+			cp.gender,
+			cp.phone
+		FROM apartment_contract ac
+			left join apartment_contract_relation acr on ac.contract_id= acr.contract_id
+			LEFT JOIN customer_person cp ON cp.person_id=ac.person_id
+			LEFT JOIN sys_user su ON ac.sign_uid=su.user_id
+			LEFT JOIN sys_department sd ON ac.sign_did=sd.dep_id
+		WHERE 
+			acr.apartment_id=#{apartment_id} and ac.deleted=0
+		ORDER BY ac.create_time DESC
+	</select>
+	
+	<!-- 根据用户id查询电子签约合同总数 -->
+	<select id="countApartmentContract" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT count(1)
+		FROM apartment_contract ac
+			left join apartment_contract_relation acr on ac.contract_id= acr.contract_id
+			LEFT JOIN customer_person cp ON cp.person_id=ac.person_id
+			LEFT JOIN sys_user su ON ac.sign_uid=su.user_id
+			LEFT JOIN sys_department sd ON ac.sign_did=sd.dep_id
+		WHERE 
+			acr.apartment_id=#{apartment_id} and ac.deleted=0
+	</select>
+	
+	<!-- 公寓最近的一份出租合同
+	<select id="selectRecentByApartment" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.vo.ApartmentContractVo">
+		SELECT
+		 	ac.*,
+			acr.apartment_id,
+			ace.end_date
+		FROM apartment_contract ac
+		INNER JOIN apartment_contract_relation acr ON acr.contract_id=ac.contract_id
+		INNER JOIN apartment a ON a.apartment_id=acr.apartment_id
+		LEFT JOIN apartment_contract_end ace ON ace.contract_id=ac.contract_id AND ace.deleted=0
+		WHERE ac.deleted=0 AND a.deleted=0 AND ac.is_active='Y'
+		AND a.house_id=(SELECT house_id FROM apartment WHERE apartment_id=#{apartment_id})
+		ORDER BY ac.real_due_date DESC LIMIT 1
+	</select>
+	 -->
+	<select id="selectRecentByApartment"  parameterType="java.lang.String" resultType="com.isz.erp.facade.house.vo.ApartmentContractVo">
+		select
+			 ac.*,a.apartment_id,ac.real_due_date end_date
+		from apartment_contract ac
+			inner join apartment_house_contract_relation ahcr on ahcr.apartment_contract_id = ac.contract_id
+			inner join house_contract hc on hc.contract_id = ahcr.house_contract_id and hc.deleted=0
+			inner join apartment a on a.house_contract_id = hc.contract_id and a.deleted=0 
+						and a.house_id=#{house_id}
+						<if test="null != room_id and '' != room_id">AND a.room_id=#{room_id}</if>
+			inner join apartment_contract_relation acr on acr.contract_id= ac.contract_id 
+							and  (a.room_id=acr.room_id or (a.room_id is null and acr.room_id is null))
+		where ac.deleted=0  and <![CDATA[ac.contract_status <> 'CANCEL']]>
+	ORDER BY ac.real_due_date DESC LIMIT 1
+	</select>
+</mapper>

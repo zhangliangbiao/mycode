@@ -1,0 +1,141 @@
+package com.isz.erp.house.biz;
+
+import com.aliyun.oss.ClientException;
+import com.aliyun.oss.OSSException;
+import com.isz.erp.common.util.*;
+import com.isz.erp.facade.house.entity.Image;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.house.mapper.ImageMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * 上传文件业务类
+ *
+ * @author SZP * zhipenglees@gmail.com
+ * @version 1.0 *
+ * @date 创建时间：2016年1月26日 下午4:20:07 *
+ * @instruction 说明：上传文件业务类
+ */
+@Service("uploadServiceBiz")
+public class UploadServiceBiz {
+
+    @Autowired
+    private ImageMapper imageMapper;
+
+    /**
+     * 上传图片到阿里云OSS并保存到DB
+     *
+     * @param sysUser
+     * @param bucketName
+     * @param rootPath
+     * @param multipartFile
+     * @return ResultObjectMsg<Map<String, Object>>
+     * @throws IOException
+     */
+    @Transactional
+    public ResultObjectMsg<Image> uploadImage(SysUser sysUser, String bucketName, String rootPath, MultipartFile multipartFile)
+            throws OSSException, ClientException, IOException {
+        try {
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return new ResultObjectMsg<Image>("登录用户不存在.");
+            }
+            if (null == multipartFile || null == multipartFile.getInputStream()) {
+                return new ResultObjectMsg<Image>("请选择要上传的图片文件.");
+            }
+            if (StringUtil.isNullOrEmpty(multipartFile.getContentType())) {
+                return new ResultObjectMsg<Image>("请写明图片文件的MIME类型.");
+            }
+            // 图片文件后缀
+            String suffix = multipartFile.getOriginalFilename().substring(multipartFile.getOriginalFilename().lastIndexOf("."));
+            // 上传图片到阿里云
+            String filePath = rootPath + "/" + DateUtil.getNowYear() + "/" + DateUtil.getNowMonth() + "/" + DateUtil.getNowDayOfMonth() + "/" + DateUtil.getNowHourOfDay() + "/" + UUID.randomUUID().toString() + suffix;
+            String aliPath = UploadUtil.uploadFile(bucketName, filePath, multipartFile);
+            if (StringUtil.isNullOrEmpty(aliPath)) {
+                return new ResultObjectMsg<Image>("图片上传OSS服务器失败.");
+            }
+            // 保存到数据库
+            Image image = new Image();
+            // 主键
+            image.setImg_id(UuidUtil.getUUID());
+            image.setSrc(aliPath);
+            image.setDeleted(0);
+            image.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            image.setCreate_uid(sysUser.getUser_id());
+            image.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            image.setUpdate_uid(sysUser.getUser_id());
+            imageMapper.insertImage(image);
+            return new ResultObjectMsg<Image>(image);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (OSSException e) {
+            throw new RuntimeException(e);
+        } catch (ClientException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 上传的图片保存到DB
+     *
+     * @param image
+     * @return
+     * @throws Exception
+     * @throws IOException
+     */
+    @Transactional
+    public Image saveUploadImage(Image image) throws Exception {
+        try {
+            // 主键
+            image.setImg_id(UuidUtil.getUUID());
+            imageMapper.insertImage(image);
+            return image;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 保存图片信息
+     *
+     * @param apiParams
+     * @return ResultObjectMsg<Map<String, Object>>
+     * @throws Exception
+     */
+    @Transactional
+    public ResultObjectMsg<Map<String, Object>> saveApiUploadImage(Map<String, Object> apiParams) throws Exception {
+        try {
+            if (null == apiParams) {
+                return new ResultObjectMsg<Map<String, Object>>("缺少参数.");
+            }
+            if (StringUtil.isNullOrEmpty((String) apiParams.get("src"))) {
+                return new ResultObjectMsg<Map<String, Object>>("缺少图片地址.");
+            }
+            Image image = new Image();
+            image.setImg_id(UuidUtil.getUUID());
+            image.setSrc((String) apiParams.get("src"));
+            image.setDeleted(0);
+            image.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            image.setCreate_uid("00000000000000000000000000000000");
+            image.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            image.setUpdate_uid("00000000000000000000000000000000");
+            imageMapper.insertImage(image);
+            apiParams.put("imgId", image.getImg_id());
+            apiParams.put("deleted", image.getDeleted());
+            apiParams.put("createTime", image.getCreate_time());
+            apiParams.put("createUid", image.getCreate_uid());
+            apiParams.put("updateTime", image.getUpdate_time());
+            apiParams.put("updateUid", image.getUpdate_uid());
+            return new ResultObjectMsg<Map<String, Object>>(apiParams);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+}

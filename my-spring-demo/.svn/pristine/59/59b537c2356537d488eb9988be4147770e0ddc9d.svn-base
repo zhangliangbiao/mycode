@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.HouseRoomConfigurationMapper">
+	<!-- 根据房间ID返回楼盘房间配置信息  -->
+	<select id="selectByRoomId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.HouseRoomConfiguration">
+		SELECT
+			*
+		FROM house_room_configuration hrc
+		INNER JOIN house_room hr ON hr.room_id=hrc.room_id AND hr.fitment_room_id=hrc.fitment_room_id
+		WHERE hrc.room_id=#{room_id}
+	</select>
+	<!-- 根据出租房源ID返回楼盘房间配置信息 -->
+	<select id="selectByHouseId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.HouseRoomConfiguration">
+		SELECT
+			*
+		FROM house_room_configuration hrc
+		INNER JOIN house_room hr ON hr.room_id=hrc.room_id AND hr.fitment_room_id=hrc.fitment_room_id
+		WHERE hr.house_id=#{house_id} hr.deleted=0 AND hr.is_active='Y'
+	</select>
+	<select id="selectRoomByHouseId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.HouseRoomConfiguration">
+		SELECT
+			*
+		FROM house_room_configuration hrc
+		INNER JOIN house_room hr ON hr.room_id=hrc.room_id AND hr.fitment_room_id=hrc.fitment_room_id
+		WHERE hr.house_id=#{house_id} AND hr.public_flag='N' AND hr.deleted=0 AND hr.is_active='Y'
+	</select>
+	<select id="selectPublicByHouseId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.HouseRoomConfiguration">
+		SELECT
+			*
+		FROM house_room_configuration hrc
+		INNER JOIN house_room hr ON hr.room_id=hrc.room_id AND hr.fitment_room_id=hrc.fitment_room_id
+		WHERE hr.house_id=#{house_id} AND hr.public_flag='Y' AND hr.deleted=0 AND hr.is_active='Y'
+	</select>
+	<!-- 批量删除 -->
+	<delete id="deleteByHouseId" parameterType="java.lang.String">
+		DELETE hrc FROM house_room_configuration hrc 
+		INNER JOIN house_room hr ON hr.fitment_room_id=hrc.fitment_room_id
+		INNER JOIN house h ON h.house_id=hr.house_id
+		WHERE h.house_id=#{house_id}
+	</delete>
+	<!-- 批量新增出租房间配置 -->
+	<insert id="saveHouseRoomConfiguration" parameterType="java.util.List">
+		INSERT INTO `house_room_configuration` 
+			(`configuration_id`,`room_id`, `owner_type`, `configuration_code`, `create_time`, `create_uid`, `fitment_room_id`)
+		VALUES
+        <foreach collection="list" item="item" index="index" separator="," >  
+     	   (#{item.configuration_id},#{item.room_id},#{item.owner_type},#{item.configuration_code},#{item.create_time},#{item.create_uid},#{item.fitment_room_id})
+   		</foreach>
+  	</insert>
+  	<!-- 批量删除 -->
+  	<delete id="deleteByFitmentId" parameterType="java.lang.String">
+		DELETE hrc FROM house_room_configuration hrc 
+		INNER JOIN fitment_room fr ON fr.fitment_room_id=hrc.fitment_room_id
+		WHERE fr.fitment_id=#{fitment_id}
+	</delete>
+	<!-- 通过fitment_room_id删除 -->
+	<delete id="deleteByHouseIdAndRoomId" parameterType="java.util.Map">
+		DELETE hrc FROM house_room_configuration hrc 
+		INNER JOIN house_room hr ON hr.fitment_room_id=hrc.fitment_room_id
+		INNER JOIN house h ON h.house_id=hr.house_id
+		WHERE hrc.room_id=#{room_id} AND h.house_id=#{house_id}
+		<if test="null != owner_type and '' != owner_type">
+			AND hrc.owner_type=#{owner_type}
+		</if>
+	</delete>
+
+	<delete id="deleteByRoomIds" parameterType="java.util.Map">
+		DELETE FROM house_room_configuration
+		WHERE fitment_room_id IN (${roomIds})
+	</delete>
+
+	<select id="selectByFitmentRoomId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.HouseRoomConfiguration">
+		SELECT
+			*
+		FROM house_room_configuration hrc WHERE hrc.fitment_room_id=#{fitment_room_id}
+	</select>
+</mapper>

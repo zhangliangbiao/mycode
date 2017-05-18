@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.ResidentialBuildingUnitMapper">
+
+    <!-- 批量保存单元信息 -->
+	<insert id="saveUnitBatch" parameterType="java.util.List">
+	    INSERT INTO `residential_building_unit` 
+			(`unit_id`,`building_id`, `unit_name`, `sort`, `create_time`, `create_uid`, 
+			`update_time`, `update_uid`,`city_code`,`area_code`)
+		VALUES
+        <foreach collection="list" item="item" index="index" separator="," >  
+     	   (#{item.unit_id},#{item.building_id},#{item.unit_name},#{item.sort},now(),#{item.create_uid},now(),
+     	  	#{item.update_uid},#{item.city_code},#{item.area_code})
+   		</foreach> 
+	</insert>
+	
+	<!-- 根据楼栋id查询单元信息 -->
+	<select id="selectList" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.ResidentialBuildingUnit">
+	   select unit_id,building_id,unit_name,sort,create_time,create_uid,update_time,update_uid
+	   from 
+	   residential_building_unit r
+	   where r.building_id = #{building_id}
+	</select>
+	
+	<!-- 更新楼层信息-->
+	<update id="updateUnitBatch" parameterType="java.util.List">
+	    <foreach collection="list" item="item" index="index" open="" close="" separator=";">  
+            UPDATE residential_building_unit 
+                <set>
+                   <if test="item.building_id != null">
+                       building_id=#{item.building_id},
+                   </if>
+                   <if test="item.unit_name != null">
+                       unit_name = #{item.unit_name}
+                   </if>
+                   <if test="item.sort != null">
+                       sort=#{item.sort} 
+                   </if>
+                   <if test="item.update_uid != null">
+                       update_uid=#{item.update_uid} 
+                   </if>
+                   update_time = now()
+                </set>
+                where unit_id = #{item.unit_id}  
+         </foreach>  
+	</update>
+	
+	<delete id="deleteUnitByBuildingId" parameterType="java.lang.String">
+	    delete from residential_building_unit where building_id = #{building_id}
+	</delete>
+
+	<delete id="deleteUnitByUnitIds" parameterType="java.lang.String">
+		delete from residential_building_unit where unit_id in (${unit_id_delete})
+	</delete>
+
+	<select id="searchBuildingUnitList" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.entity.ResidentialBuildingUnit">
+		SELECT rbu.unit_id,rbu.city_code,rbu.area_code,rbu.building_id,rbu.unit_name, (SELECT COUNT(1) FROM residential_building_floor WHERE unit_id=rbu.unit_id AND building_id=rbu.building_id) floor_num FROM residential_building_unit rbu WHERE rbu.building_id=#{building_id} ORDER BY rbu.unit_name
+	</select>
+
+	<select id="countSearchBuildingUnit" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(1) FROM residential_building_unit WHERE building_id=#{building_id}
+	</select>
+
+	<select id="selectByName" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.entity.ResidentialBuildingUnit">
+		SELECT * FROM residential_building_unit WHERE building_id=#{building_id} AND unit_name=#{unit_name}
+	</select>
+</mapper>

@@ -1,0 +1,128 @@
+package com.isz.erp.house.service.impl;
+
+import com.isz.erp.common.util.IszLogger;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.service.LockService;
+import com.isz.erp.house.biz.LockServiceBiz;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+
+@Service("lockServiceFacade")
+public class LockServiceFacade implements LockService {
+    @Autowired
+    private LockServiceBiz lockServiceBiz;
+
+    @Override
+    public ResultObjectMsg<Map<String, Object>> searchApiLockInfo(Map<String, Object> apiParams) {
+        try {
+            return lockServiceBiz.searchApiLockInfo(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.searchApiLockInfo", e);
+            return new ResultObjectMsg<Map<String, Object>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveApiLockOpenRecord(Map<String, Object> apiParams) {
+        try {
+            return lockServiceBiz.saveApiLockOpenRecord(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.saveApiLockOpenRecord", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiLockInfoByApartmentContract(Map<String, Object> apiParams) {
+        try {
+            return lockServiceBiz.searchApiLockInfoByApartmentContract(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.searchApiLockInfoByApartmentContract", e);
+            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiCustomerPassword(Map<String, Object> apiParams) {
+        try {
+            return lockServiceBiz.searchApiCustomerPassword(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.searchApiCustomerPassword", e);
+            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiApartmentByRoomIds(String roomIds) {
+        try {
+            return lockServiceBiz.searchApiApartmentByRoomIds(roomIds);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.searchApiApartmentByRoomIds", e);
+            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<Map<String, Object>> searchApiLockInfoByHouseNum(String houseNum) {
+        try {
+            return lockServiceBiz.searchApiLockInfoByHouseNum(houseNum);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.searchApiLockInfoByHouseNum", e);
+            return new ResultObjectMsg<Map<String, Object>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<Map<String, Object>> searchApiLockBindByLockId(String lockId) {
+        try {
+            return lockServiceBiz.searchApiLockBindByLockId(lockId);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.searchApiLockBindByLockId", e);
+            return new ResultObjectMsg<Map<String, Object>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveApiLockManage(Map<String, Object> apiParams) {
+        try {
+            return lockServiceBiz.saveApiLockManage(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.saveApiLockManage", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiLockPassword(Map<String, Object> apiParams) {
+        try {
+            return lockServiceBiz.searchApiLockPassword(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.searchApiLockPassword", e);
+            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    public ResultMsg saveApiLockPassword(Map<String, Object> apiParams) {
+        try {
+            return lockServiceBiz.saveApiLockPassword(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("LockServiceFacade.saveApiLockPassword", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+	@Override
+	public ResultObjectMsg<List<Map<String, Object>>> searchApiLockManageByHouseInfo(Map<String, Object> apiParams) {
+		 try {
+	            return lockServiceBiz.searchApiLockManageByHouseInfo(apiParams);
+	        } catch (Exception e) {
+	            IszLogger.error("LockServiceFacade.searchApiLockManageByHouseInfo", e);
+	            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+	        }
+	}
+
+}

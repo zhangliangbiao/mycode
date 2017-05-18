@@ -1,0 +1,64 @@
+package com.isz.erp.house.mapper;
+
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.ResidentialBuildingFloor;
+import org.apache.ibatis.annotations.Param;
+
+/**
+ * @author WangShuo *
+ * @version 1.0 *
+ * @date 创建时间：2016年1月13日 下午3:01:08 *
+ * @instruction 说明：楼盘-栋 对象
+ */
+public interface ResidentialBuildingFloorMapper extends Mapper<ResidentialBuildingFloor> {
+
+    /**
+     * 批量保存楼层信息
+     *
+     * @param residentialBuildingFloorList
+     * @return
+     */
+    public Integer saveFloorBatch(List<ResidentialBuildingFloor> residentialBuildingFloorList);
+
+    /**
+     * 根据楼栋id查询楼层信息
+     *
+     * @param building_id
+     * @return
+     */
+    public List<ResidentialBuildingFloor> selectList(String building_id);
+
+
+    /**
+     * 批量更新楼层信息
+     *
+     * @param residentialBuildingFloorList
+     * @return
+     */
+    public Integer updateFloorBatch(List<ResidentialBuildingFloor> residentialBuildingFloorList);
+
+    /**
+     * 删除楼层
+     *
+     * @param building_id
+     * @return
+     */
+    public Integer deleteFloorByBuildingId(String building_id);
+
+    public List<Map<String, Object>> selectListByMap(Map<String, Object> paramsMap);
+
+    public void deleteFloorByFloorIds(@Param("floor_id_delete") String floor_id_delete);
+
+    public void deleteByUnitIds(@Param("unit_id_delete") String unit_id_delete);
+
+    public List<ResidentialBuildingFloor> searchBuildingFloorList(Map<String, Object> pageData);
+
+    public Integer countSearchBuildingFloor(Map<String, Object> pageData);
+
+    public ResidentialBuildingFloor selectByMap(Map<String,Object> pageData);
+
+}

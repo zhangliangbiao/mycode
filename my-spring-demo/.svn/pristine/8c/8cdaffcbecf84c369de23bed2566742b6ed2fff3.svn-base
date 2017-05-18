@@ -1,0 +1,1363 @@
+package com.isz.erp.house.biz;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrRequest;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.SolrQuery.ORDER;
+import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.common.SolrDocumentList;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.DateUtil;
+import com.isz.erp.common.util.DictConstants;
+import com.isz.erp.common.util.ParameterUtil;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.common.util.SolrClientUtil;
+import com.isz.erp.common.util.StringUtil;
+import com.isz.erp.common.util.UuidUtil;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.house.entity.ApplyPhoto;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.HouseRent;
+import com.isz.erp.facade.house.entity.OnlineHouseCategory;
+import com.isz.erp.facade.house.entity.OnlineHouseInfo;
+import com.isz.erp.facade.house.entity.OnlineHouseRecommended;
+import com.isz.erp.facade.house.entity.OnlineHouseTags;
+import com.isz.erp.facade.thirdparty.bridge.service.BridgeCallService;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.facade.user.service.UserService;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.mapper.ApartmentMapper;
+import com.isz.erp.house.mapper.ApplyPhotoMapper;
+import com.isz.erp.house.mapper.HouseMapper;
+import com.isz.erp.house.mapper.HouseRentMapper;
+import com.isz.erp.house.mapper.HouseRoomConfigurationMapper;
+import com.isz.erp.house.mapper.HouseRoomImgMapper;
+import com.isz.erp.house.mapper.OnlineApartmentMapper;
+import com.isz.erp.house.mapper.OnlineHouseCategoryMapper;
+import com.isz.erp.house.mapper.OnlineHouseInfoMapper;
+import com.isz.erp.house.mapper.OnlineHouseMapper;
+import com.isz.erp.house.mapper.OnlineHouseRecommendedMapper;
+import com.isz.erp.house.mapper.OnlineHouseTagsMapper;
+
+/**
+ * 自营公寓业务实现
+ *
+ * @author hjj 
+ * @version 1.0 *
+ * @date 创建时间：2016年7月7日 下午3:38:09
+ * @instruction 说明：
+ */
+@Service("onlineHouseServiceBiz")
+public class OnlineHouseServiceBiz {
+
+    @Autowired
+    private OnlineHouseInfoMapper onlineHouseInfoMapper;
+
+    @Autowired
+    private OnlineHouseRecommendedMapper onlineHouseRecommendedMapper;
+
+    @Autowired
+    private OnlineHouseTagsMapper onlineHouseTagsMapper;
+    
+    @Autowired
+    private ApartmentMapper apartmentMapper;
+    
+    @Autowired
+    private HouseMapper houseMapper;
+    
+    @Autowired
+    private UserService userService;
+    
+    @Autowired
+    private OnlineApartmentMapper onlineApartmentMapper;
+    
+    @Autowired
+    private HouseRentMapper houseRentMapper;
+    
+    @Autowired
+    private OnlineHouseMapper onlineHouseMapper;
+    
+    
+    @Autowired
+    private OnlineHouseCategoryMapper onlineHouseCategoryMapper;
+    
+    
+    @Autowired
+    private ApplyPhotoMapper applyPhotoMapper;
+    
+    @Autowired
+    private HouseRoomConfigurationMapper  houseRoomConfigurationMapper;
+    @Autowired
+    private HouseRoomImgMapper  houseRoomImgMapper;
+    
+    @Autowired
+    private SolrClientUtil solrClientUtil;
+    
+    @Autowired
+    private BridgeCallService bridgeCallService;
+    
+    private String SOLR_CORE = "house_core";
+    
+    
+    /**
+     * 整租房源信息-保存
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultMsg saveOnlineHouseInfo(OnlineHouseInfo onlineHouseInfo, SessionVo sessionVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+            if (null == onlineHouseInfo || (null == onlineHouseInfo.getApartment_id() && null == onlineHouseInfo.getHouse_id())) {
+                return ResultMsg.createErrorMsg("缺少房源ID.");
+            }
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            OnlineHouseInfo selectOnlineHouseInfoDetail= new OnlineHouseInfo();
+            if("undefined".compareTo(onlineHouseInfo.getApartment_id())==0){
+            	 selectOnlineHouseInfoDetail = onlineHouseInfoMapper.selectOnlineBaseHouseInfoDetail(onlineHouseInfo.getHouse_id());
+            }else{
+            	 selectOnlineHouseInfoDetail = onlineHouseInfoMapper.selectOnlineHouseInfoDetail(onlineHouseInfo.getApartment_id());
+            }
+            
+            if(selectOnlineHouseInfoDetail==null){
+            // 验证
+            String validateResult = validate(onlineHouseInfo);
+            if (StringUtils.isNotBlank(validateResult)) {
+                return ResultMsg.createErrorMsg(validateResult);
+            }
+            //新增官网发布信息
+            String infoId = UuidUtil.getUUID();
+            onlineHouseInfo.setInfo_id(infoId);
+            onlineHouseInfo.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            onlineHouseInfo.setCreate_uid(sysUser.getUser_id());
+            onlineHouseInfo.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            onlineHouseInfo.setUpdate_uid(sysUser.getUser_id());
+            if("undefined".compareTo(onlineHouseInfo.getApartment_id())==0){
+            	onlineHouseInfo.setApartment_id(null);
+            }
+            onlineHouseInfo.setAudit_status(DictConstants.IssureAuditStatus.APPLE_UNPROCESSED.getKeyEn());
+            onlineHouseInfoMapper.insert(onlineHouseInfo);
+            ArrayList<OnlineHouseCategory> categoryList = onlineHouseInfo.getCategoryList();
+            if(categoryList!=null){
+            	for (OnlineHouseCategory onlineHouseCategory : categoryList) {
+            		//插入首页推荐信息
+            		String categoryId = UuidUtil.getUUID();
+            		onlineHouseCategory.setCategory_id(categoryId);
+            		onlineHouseCategory.setInfo_id(infoId);
+            		onlineHouseCategory.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            		onlineHouseCategory.setCreate_uid(sysUser.getUser_id());
+            		onlineHouseCategoryMapper.insert(onlineHouseCategory);
+            		ArrayList<OnlineHouseRecommended> recommendedTagList = onlineHouseCategory.getRecommendedTagList();
+            		if(recommendedTagList!=null){
+            			for (OnlineHouseRecommended onlineHouseRecommended : recommendedTagList) {
+            				//插入首页推荐信息
+                    		String  recommendedId = UuidUtil.getUUID();
+                    		onlineHouseRecommended.setCategory_id(categoryId);
+                    		onlineHouseRecommended.setRecommended_id(recommendedId);
+                    		onlineHouseRecommended.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                    		onlineHouseRecommended.setCreate_uid(sysUser.getUser_id());
+                    		onlineHouseRecommendedMapper.insert(onlineHouseRecommended);
+                    		
+						}
+            		}
+				}
+            }
+            ArrayList<OnlineHouseTags> onlineHouseTagList = onlineHouseInfo.getOnlineHouseTagList();
+            for (OnlineHouseTags onlineHouseTags : onlineHouseTagList) {
+            	String tagId = UuidUtil.getUUID();
+            	onlineHouseTags.setInfo_id(infoId);
+            	onlineHouseTags.setTag_id(tagId);
+            	onlineHouseTags.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            	onlineHouseTags.setCreate_uid(sysUser.getUser_id());
+            	onlineHouseTagsMapper.insert(onlineHouseTags);
+			}
+           
+           
+            /*ArrayList<OnlineHouseTags> onlineHouseTagList = onlineHouseInfo.getOnlineHouseTagList();
+            for (OnlineHouseTags onlineHouseTags : onlineHouseTagList) {
+            	String tagId = UuidUtil.getUUID();
+            	onlineHouseTags.setInfo_id(infoId);
+            	onlineHouseTags.setTag_id(tagId);
+            	onlineHouseTags.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            	onlineHouseTags.setCreate_uid(sysUser.getUser_id());
+            	onlineHouseTagsMapper.insert(onlineHouseTags);
+			}
+            ArrayList<OnlineHouseRecommended> recommendedTagList = onlineHouseInfo.getRecommendedTagList();
+            if(recommendedTagList!=null){
+	            for (OnlineHouseRecommended onlineHouseRecommend : recommendedTagList) {
+	            	String recommendedId = UuidUtil.getUUID();
+	            	onlineHouseRecommend.setInfo_id(infoId);
+	            	onlineHouseRecommend.setRecommended_id(recommendedId);
+	            	onlineHouseRecommend.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+	            	onlineHouseRecommend.setCreate_uid(sysUser.getUser_id());
+	            	onlineHouseRecommendedMapper.insert(onlineHouseRecommend);
+	            }
+            }*/
+            return ResultMsg.createOkMsg();
+          }else{ //修改
+        	 /* if(selectOnlineHouseInfoDetail.getAudit_status()!=null&&selectOnlineHouseInfoDetail.getAudit_status().compareTo(DictConstants.IssureAuditStatus.APPLE_ISSURE.getKeyEn())!=0&&
+        			  selectOnlineHouseInfoDetail.getAudit_status().compareTo(DictConstants.IssureAuditStatus.APPLE_REJECTED.getKeyEn())!=0
+        			  && selectOnlineHouseInfoDetail.getAudit_status().compareTo(DictConstants.IssureAuditStatus.OFFLINE_HOUSE.getKeyEn())!=0){
+        		 
+        	  }
+        	  if(onlineHouseInfo.getAudit_status()==null){
+        		  onlineHouseInfo.setAudit_status(DictConstants.IssureAuditStatus.APPLE_UNPROCESSED.getKeyEn());
+        	  }*/
+        	  //如果审核状态为空 则处理为申请未发布
+        	  if(onlineHouseInfo.getAudit_status()==null){
+        		  onlineHouseInfo.setAudit_status(DictConstants.IssureAuditStatus.APPLE_UNPROCESSED.getKeyEn());
+				  onlineHouseInfo.setAudit_time(DateUtil.getCurrentDateTimeAsString());
+        	  }
+        	  if(selectOnlineHouseInfoDetail.getAudit_status()!=null&&selectOnlineHouseInfoDetail.getAudit_status().compareTo(DictConstants.IssureAuditStatus.APPLE_ISSURE.getKeyEn())!=0){
+        		  onlineHouseInfo.setAudit_status(DictConstants.IssureAuditStatus.APPLE_UNPROCESSED.getKeyEn());
+        	  }else{
+        		  onlineHouseInfo.setAudit_status(selectOnlineHouseInfoDetail.getAudit_status());
+        		  onlineHouseInfo.setAudit_time(selectOnlineHouseInfoDetail.getAudit_time());
+        	  }
+        	 
+        	  onlineHouseInfo.setInfo_id(selectOnlineHouseInfoDetail.getInfo_id());
+        	  onlineHouseInfo.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+              onlineHouseInfo.setUpdate_uid(sysUser.getUser_id());
+              onlineHouseInfo.setAudit_time(selectOnlineHouseInfoDetail.getAudit_time());
+        	  onlineHouseInfoMapper.updateByPrimaryKey(onlineHouseInfo);
+        	  ArrayList<OnlineHouseCategory> categoryListOld = onlineHouseInfo.getCategoryList();
+        	  //更新中间表
+        	  ArrayList<OnlineHouseCategory> categoryList = onlineHouseInfo.getCategoryList();
+        	  if(null!=categoryList){
+        		  for (OnlineHouseCategory onlineHouseCategory : categoryListOld) {
+        			 onlineHouseRecommendedMapper.deleteByCategoryId(onlineHouseCategory.getCategory_id());
+				}
+        	  }
+        	  onlineHouseCategoryMapper.deleteByInfoId(onlineHouseInfo.getInfo_id());
+        	  onlineHouseTagsMapper.deleteByInfoId(onlineHouseInfo.getInfo_id());
+        	  if(categoryList!=null){
+              	for (OnlineHouseCategory onlineHouseCategory : categoryList) {
+              		//插入首页推荐信息
+              		String categoryId = UuidUtil.getUUID();
+              		onlineHouseCategory.setCategory_id(categoryId);
+              		onlineHouseCategory.setInfo_id(onlineHouseInfo.getInfo_id());
+              		onlineHouseCategory.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+              		onlineHouseCategory.setCreate_uid(sysUser.getUser_id());
+              		onlineHouseCategoryMapper.insert(onlineHouseCategory);
+              		ArrayList<OnlineHouseRecommended> recommendedTagList = onlineHouseCategory.getRecommendedTagList();
+              		if(recommendedTagList!=null){
+              			for (OnlineHouseRecommended onlineHouseRecommended : recommendedTagList) {
+              				//插入首页推荐信息
+                      		String  recommendedId = UuidUtil.getUUID();
+                      		onlineHouseRecommended.setCategory_id(categoryId);
+                      		onlineHouseRecommended.setRecommended_id(recommendedId);
+                      		onlineHouseRecommended.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                      		onlineHouseRecommended.setCreate_uid(sysUser.getUser_id());
+                      		onlineHouseRecommendedMapper.insert(onlineHouseRecommended);
+                      		
+  						}
+              		}
+  				}
+              	
+              }
+        	  
+        	  ArrayList<OnlineHouseTags> onlineHouseTagList = onlineHouseInfo.getOnlineHouseTagList();
+              for (OnlineHouseTags onlineHouseTags : onlineHouseTagList) {
+              	String tagId = UuidUtil.getUUID();
+              	onlineHouseTags.setInfo_id(onlineHouseInfo.getInfo_id());
+              	onlineHouseTags.setTag_id(tagId);
+              	onlineHouseTags.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+              	onlineHouseTags.setCreate_uid(sysUser.getUser_id());
+              	onlineHouseTagsMapper.insert(onlineHouseTags);
+  			}
+        	 
+        	  	 return ResultMsg.createOkMsg("修改成功");
+    	  }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    
+    
+    
+    /**
+     * 验证整租房源的详情数据
+     *
+     * @param apartment
+     * @return String
+     */
+    private String validate(OnlineHouseInfo onlineHouseInfo) throws Exception {
+       
+        return null;
+    }
+    
+    
+    /**
+     * 整租房源信息-查询
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultObjectMsg<OnlineHouseInfo> selectOnlineHouseInfoDetail(SessionVo sessionVo, String apartmentId) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+           
+            ResultObjectMsg <OnlineHouseInfo> resultObjectMsg = new ResultObjectMsg<OnlineHouseInfo>("缺少用户ID,请登录.");
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                 return resultObjectMsg;
+            }
+           
+            OnlineHouseInfo selectOnlineHouseInfoDetail = onlineHouseInfoMapper.selectOnlineHouseInfoDetail(apartmentId);
+            resultObjectMsg = new ResultObjectMsg<OnlineHouseInfo>(selectOnlineHouseInfoDetail);
+            
+            return resultObjectMsg;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * 整租房源信息-查询（托管）
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultObjectMsg<OnlineHouseInfo> selectOnlineBaseHouseInfoDetail(SessionVo sessionVo, String houseId) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+           
+            ResultObjectMsg <OnlineHouseInfo> resultObjectMsg = new ResultObjectMsg<OnlineHouseInfo>("缺少用户ID,请登录.");
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                 return resultObjectMsg;
+            }
+           
+            OnlineHouseInfo selectOnlineHouseInfoDetail = onlineHouseInfoMapper.selectOnlineBaseHouseInfoDetail(houseId);
+            resultObjectMsg = new ResultObjectMsg<OnlineHouseInfo>(selectOnlineHouseInfoDetail);
+            
+            return resultObjectMsg;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * 整租房源信息-校验
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultMsg validOnlineHouse( String apartmentId,String rentType,SessionVo sessionVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+           
+            ResultObjectMsg <OnlineHouseInfo> resultObjectMsg = new ResultObjectMsg<OnlineHouseInfo>("缺少用户ID,请登录.");
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                 return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+        	Apartment apartment= new Apartment();
+            if(DictConstants.RentType.SHARE.getKeyEn().compareTo(rentType)==0){
+            	 apartment = apartmentMapper.selectShareHouseByApartmentId(apartmentId);
+            }else{
+            	 apartment = apartmentMapper.selectEntireHouseByApartmentId(apartmentId);
+            }
+            //校验房源信息后再集
+            if(apartment==null){
+            	return ResultMsg.createErrorMsg("该房源不存在！");
+            }
+            if(DictConstants.RentType.ENTIRE.getKeyEn().compareTo(apartment.getRent_type())==0){
+	            if(apartment.getProperty_use()==null){
+	            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（物业用途），才能提交发布");
+	            }
+	            if(apartment.getProperty_type()==null){
+	            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（物业类型），才能提交发布");
+	            }
+	            if(apartment.getFitment_type()==null){
+	            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（装修情况），才能提交发布");
+	            }
+	            if(apartment.getOrientation()==null){
+	            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（朝向），才能提交发布");
+	            }
+            }else{
+            	if(apartment.getRoom_orientation()==null){
+	            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（朝向），才能提交发布");
+	            }
+            }
+            if(apartment.getRooms()==null||apartment.getLivings()==null||apartment.getKitchens()==null||apartment.getBathrooms()==null||apartment.getBalconys()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（户型信息），才能提交发布");
+            }
+            if(apartment.getLook_type()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（看房方式），才能提交发布");
+            }
+            if(apartment.getRent_price()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（月租），才能提交发布");
+            }
+            if(apartment.getBuild_area()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（面积），才能提交发布");
+            }
+           
+           
+            if(apartment.getWeb_manager_did()==null||apartment.getWeb_manager_uid()==null){
+            	//判断是否是收出不分的 收出不分的直接取签约人
+            	
+            	 SysUser user = apartmentMapper.selectApartmentWebUser(apartment.getApartment_id());
+                if (DictConstants.BusinessType.InOutNotSeparate.value().equals(user.getBusiness_type()) && StringUtil.notNullOrEmpty(user.getUser_id())) {//吸出不分--官网人为该员工
+                }else{
+                	return ResultMsg.createErrorMsg("对不起，您的房源归属信息不完整，请先完成必填信息（官网维护人），才能提交发布");
+                }
+            }
+            
+            
+           /* //装修类型
+            if(DictConstants.RentType.ENTIRE.getKeyEn().equals(apartment.getRent_type())&&DictConstants.ApartmentType.MANAGE.getKeyEn().equals(apartment.getApartment_type())){
+            }else{
+            	if(DictConstants.FitmentStatus.FITMENTING.getKeyEn().equals(apartment.getFitment_status())){//装修状态
+            		return ResultMsg.createErrorMsg("装修中的房源无法发布至官网，请确认已交房再申请发布！");
+            	}
+            }*/
+            
+            //照片数量
+            //如果已经申请拍照，则不需要申请发布
+          //如果是装修中的状态跳过申请照片过程和数量问题
+            if(!DictConstants.FitmentStatus.FITMENTING.getKeyEn().equals(apartment.getFitment_status())){
+	            ApplyPhoto applyPhoto = applyPhotoMapper.selectByApartmentId(apartmentId);
+	            if(applyPhoto==null){
+		         // 托管公寓下的出租房源配置-出租房源图片
+		            if (DictConstants.ApartmentType.MANAGE.value().equals(apartment.getApartment_type())) {
+		                apartment.setHouseConfigurationList(apartment.getHouseConfigurationList());
+		                if(!DictConstants.RentType.SHARE.getKeyEn().equals(rentType)){
+		                	apartment.setHouseImgList(apartment.getHouseImgList());
+		                }
+		                
+		                if(!DictConstants.RentType.SHARE.getKeyEn().equals(rentType)&&apartment.getHouseImgList()!=null&&apartment.getHouseImgList().size()<5){
+		                	return ResultMsg.createErrorMsg("您的房源照片数量不符合条件，请先提交拍照申请，待申请后再发布房源！");
+		                }else if(apartment.getHouseRoomImgList()!=null&&apartment.getHouseRoomImgList().size()<1){
+		                	return ResultMsg.createErrorMsg("您的房源照片数量不符合条件，请先提交拍照申请，待申请后再发布房源！");
+		                }
+		            }
+		            // 品牌公寓下的房间配置
+		            if (DictConstants.ApartmentType.BRAND.value().equals(apartment.getApartment_type())) {
+		                // 公共区域
+		                apartment.setHouseRoomPublicConfigurationList(houseRoomConfigurationMapper.selectPublicByHouseId(apartment.getHouse_id()));
+		                // 卧室
+		                apartment.setHouseRoomConfigurationList(houseRoomConfigurationMapper.selectRoomByHouseId(apartment.getHouse_id()));
+		                // 户型图和室内图[公共区域]
+		                Map<String, Object> publicHouseRoomImgsMap = new HashMap<String, Object>();
+		                publicHouseRoomImgsMap.put("house_id", apartment.getHouse_id());
+		                publicHouseRoomImgsMap.put("house_contract_id", apartment.getHouse_contract_id());
+		                if(!DictConstants.RentType.SHARE.getKeyEn().equals(rentType)){
+		                	apartment.setHouseRoomImgList(houseRoomImgMapper.selectPublicByHouseIdContractId(publicHouseRoomImgsMap));
+		                }
+		                	 if(apartment.getHouseRoomImgList()!=null&&apartment.getHouseRoomImgList().size()<1){
+		                     	return ResultMsg.createErrorMsg("您的房源照片数量不符合条件，请先提交拍照申请，待申请后再发布房源！");
+		                     }
+		            }
+	            }
+            }
+           
+            
+            
+             
+            
+            return ResultMsg.createOkMsg();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * 整租房源信息-托管校验
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultMsg validOnlineBaseHouse( String houseId,SessionVo sessionVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+           
+            ResultObjectMsg <OnlineHouseInfo> resultObjectMsg = new ResultObjectMsg<OnlineHouseInfo>("缺少用户ID,请登录.");
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                 return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            House house = houseMapper.selectByHouseId(houseId);
+            //校验房源信息后再集
+            if(house==null){
+            	return ResultMsg.createErrorMsg("该房源不存在！");
+            }
+            
+            if(house.getProperty_use()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（物业用途），才能提交发布");
+            }
+            if(house.getProperty_type()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（物业类型），才能提交发布");
+            }
+            if(house.getRooms()==null||house.getLivings()==null||house.getKitchens()==null||house.getBathrooms()==null||house.getBalconys()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（户型信息），才能提交发布");
+            }
+            if(house.getHouseRent().getSource()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（来源），才能提交发布");
+            }
+            if(house.getBuild_area()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（面积），才能提交发布");
+            }
+            if(house.getOrientation()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（朝向），才能提交发布");
+            }
+            if(house.getFitment_type()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（装修情况），才能提交发布");
+            }
+            if(house.getHouseRent().getRental_price()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（租金），才能提交发布");
+            }
+            if(house.getHouseRent().getBelong_did()==null||house.getHouseRent().getBelong_uid()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源信息不完整，请先完成必填信息（归属信息），才能提交发布");
+            }
+            if(house.getHouseRent().getWeb_manager_did()==null||house.getHouseRent().getWeb_manager_uid()==null){
+            	return ResultMsg.createErrorMsg("对不起，您的房源归属信息不完整，请先完成必填信息（官网维护人），才能提交发布");
+            }
+            
+            
+            return ResultMsg.createOkMsg();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    
+    
+    /**
+     * 整租房源-列表
+     *
+     * @param pageData
+     * @return
+     * @throws Exception
+     */
+    public ResultObjectMsg<PagingHelper<Apartment>> searchOnlineApartmentList(Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        String sortP = ParameterUtil.getString(pageData, "sort","");
+        if("issure_audit_status".equals(sortP)){
+        	pageData.put("sort", "ohi.audit_status");
+        }
+        
+        
+        SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+        if (null != sessionVo) {
+            SysUser sysUser = sessionVo.getSysUser();
+            pageData.put("current_city_code", sysUser.getCurrent_city_code());
+        }
+        List<String> paraList = new ArrayList<String>();
+        	
+        // 出租状态(多选)
+        paraList.add("rent_status_search");
+        // 激活类型(多选)
+        paraList.add("activated_type_search");
+        // 公寓名称
+        paraList.add("apartment_kind_search");
+        // 朝向
+        paraList.add("orientation_search");
+        // 装修
+        paraList.add("fitment_type_search");
+        // 物业类型
+        paraList.add("property_type_search");
+        // 物业用途
+        paraList.add("property_use_search");
+        // 公寓类型
+        paraList.add("apartment_type_search");
+        // 装修状态
+        paraList.add("fitment_status_search");
+        // 着火状态
+        paraList.add("fire_status_search");
+        // 改造方式
+        paraList.add("reform_way_search");
+        // 看房方式
+        paraList.add("look_type_search");
+        // 签约部门
+        String signDepIds = ParameterUtil.getString(pageData, "sign_dept_search", "");
+        if (StringUtils.isNotBlank(signDepIds)) {
+            signDepIds = userService.getChildDepIds(signDepIds);
+            pageData.put("sign_dept_search", signDepIds);
+        }
+        paraList.add("sign_dept_search");
+        paraList.add("sign_uid_search");
+        paraList.add("business_circle_search");
+        paraList.add("area_code_search");
+        // 责任部门
+        String responseDepIds = ParameterUtil.getString(pageData, "dept_response_search", "");
+        if (StringUtils.isNotBlank(responseDepIds)) {
+            responseDepIds = userService.getChildDepIds(responseDepIds);
+            pageData.put("dept_response_search", responseDepIds);
+        }
+
+        pageData = StringUtil.readAndWritePageData(pageData, paraList);
+
+
+        PagingHelper<Apartment> ph = new PagingHelper<Apartment>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<Apartment> list = onlineApartmentMapper.searchOnlineApartmentList(pageData);
+        /*for (Apartment apartment : list) {
+            apartment.setBusinessCircleList(apartment.getBusinessCircleList());
+        }*/
+        Integer count = onlineApartmentMapper.countSearchOnlineApartment(pageData);
+
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<Apartment>>(ph);
+    }
+
+    
+    /**
+     * 整租房源信息-保存
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultMsg auditOnlineHouseInfo(OnlineHouseInfo onlineHouseInfo, SessionVo sessionVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+            if (null == onlineHouseInfo || (null == onlineHouseInfo.getApartment_id() && null == onlineHouseInfo.getHouse_id())) {
+                return ResultMsg.createErrorMsg("缺少房源ID.");
+            }
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            OnlineHouseInfo selectOnlineHouseInfoDetail= new OnlineHouseInfo();
+            if(null==onlineHouseInfo.getApartment_id()||"undefined".compareTo(onlineHouseInfo.getApartment_id())==0){
+            	
+            	 selectOnlineHouseInfoDetail = onlineHouseInfoMapper.selectOnlineBaseHouseInfoDetail(onlineHouseInfo.getHouse_id());
+            	 if(selectOnlineHouseInfoDetail==null){//如果不存在则新增
+            		//新增官网发布信息
+                     String infoId = UuidUtil.getUUID();
+                     onlineHouseInfo.setInfo_id(infoId);
+                     onlineHouseInfo.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                     onlineHouseInfo.setCreate_uid(sysUser.getUser_id());
+                     onlineHouseInfo.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                     onlineHouseInfo.setUpdate_uid(sysUser.getUser_id());
+                     onlineHouseInfo.setApartment_id(null);
+                     
+                     int insert = onlineHouseInfoMapper.insert(onlineHouseInfo);
+                     if(insert>0){
+                    	 selectOnlineHouseInfoDetail=onlineHouseInfo;
+                     }
+            	 }else{
+            		 selectOnlineHouseInfoDetail.setAudit_status(onlineHouseInfo.getAudit_status());
+            		 selectOnlineHouseInfoDetail.setAudit_time(DateUtil.getCurrentDateTimeAsString());
+            		 selectOnlineHouseInfoDetail.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            		 selectOnlineHouseInfoDetail.setUpdate_uid(sysUser.getUser_id());
+                     selectOnlineHouseInfoDetail.setReject_remark(onlineHouseInfo.getReject_remark());
+                     onlineHouseInfoMapper.updateByPrimaryKey(selectOnlineHouseInfoDetail);
+                     
+            	 }
+            	 return ResultMsg.createOkMsg("修改成功");
+            }else{
+	            selectOnlineHouseInfoDetail = onlineHouseInfoMapper.selectOnlineHouseInfoDetail(onlineHouseInfo.getApartment_id());
+	            		//审核意见
+	                 if(selectOnlineHouseInfoDetail!=null){//审核状态
+	                 	selectOnlineHouseInfoDetail.setAudit_status(onlineHouseInfo.getAudit_status());
+	                 	selectOnlineHouseInfoDetail.setAudit_time(DateUtil.getCurrentDateTimeAsString());
+	                 	selectOnlineHouseInfoDetail.setReject_remark(onlineHouseInfo.getReject_remark());
+	                 	onlineHouseInfoMapper.updateByPrimaryKey(selectOnlineHouseInfoDetail);
+	                 	if(DictConstants.IssureAuditStatus.APPLE_ISSURE.getKeyEn().compareTo(onlineHouseInfo.getAudit_status())==0){
+	     	            	if("undefined".compareTo(onlineHouseInfo.getApartment_id())==0){
+	     	            		//修改房源的发布状态(托管)
+	     	            		HouseRent houseRent = houseRentMapper.selectByHouseId(onlineHouseInfo.getHouse_id());
+	     	            		houseRent.setOnline_status(DictConstants.OnlineStatus.ONLINE.getKeyEn());
+	     	            		houseRent.setOnline_time(DateUtil.getCurrentDateTimeAsString());
+	     	            		houseRent.setOnline_uid(selectOnlineHouseInfoDetail.getCreate_uid());
+	     	            		//上架房源的时候需要分配分机号 2016-11-02
+	     	            		ResultMsg saveBridgeExten = bridgeCallService.saveBridgeExten(null, onlineHouseInfo.getHouse_id());
+	     	            		if(saveBridgeExten.getCode()==-1){
+	     	            			return saveBridgeExten;
+	     	            		}
+	     	            		houseRentMapper.updateByPrimaryKey(houseRent);
+	     	            	}else{
+	     	            		//修改房源的发布状态(自营)
+	     	            		Apartment apartment = new Apartment();
+	     	            		apartment.setApartment_id(onlineHouseInfo.getApartment_id());
+	     	            		Apartment apartmentResult = apartmentMapper.selectByPrimaryKey(apartment);
+	     	            		apartmentResult.setOnline_status(DictConstants.OnlineStatus.ONLINE.getKeyEn());
+	     	            		apartmentResult.setOnline_time(DateUtil.getCurrentDateTimeAsString());
+	     	            		apartmentResult.setOnline_uid(selectOnlineHouseInfoDetail.getCreate_uid());
+	     	            		//上架房源的时候需要分配分机号 2016-11-02
+	     	            		ResultMsg saveBridgeExten = bridgeCallService.saveBridgeExten(apartmentResult.getApartment_id(), apartmentResult.getHouse_id());
+	     	            		if(saveBridgeExten.getCode()==-1){
+	     	            			return saveBridgeExten;
+	     	            		}
+	     	            		apartmentMapper.updateByPrimaryKey(apartmentResult);
+	     	            	}
+	                 	}else if (DictConstants.IssureAuditStatus.OFFLINE_HOUSE.getKeyEn().compareTo(onlineHouseInfo.getAudit_status())==0){//下架
+	                 		if("undefined".compareTo(onlineHouseInfo.getApartment_id())==0){
+	     	            		//修改房源的发布状态(托管)
+	     	            		HouseRent houseRent = houseRentMapper.selectByHouseId(onlineHouseInfo.getHouse_id());
+	     	            		houseRent.setOnline_status(DictConstants.OnlineStatus.OFFLINE.getKeyEn());
+	     	            		//下架房源的时候需要分配分机号 2016-11-02
+	     	            		ResultMsg saveBridgeExten = bridgeCallService.deleteBridgeExten(null, onlineHouseInfo.getHouse_id());
+	     	            		if(saveBridgeExten.getCode()==-1){
+	     	            			return saveBridgeExten;
+	     	            		}
+	     	            		houseRentMapper.updateByPrimaryKey(houseRent);
+	     	            	}else{
+	     	            		//修改房源的发布状态(自营)
+	     	            		Apartment apartment = new Apartment();
+	     	            		apartment.setApartment_id(onlineHouseInfo.getApartment_id());
+	     	            		Apartment apartmentResult = apartmentMapper.selectByPrimaryKey(apartment);
+	     	            		apartmentResult.setOnline_status(DictConstants.OnlineStatus.OFFLINE.getKeyEn());
+	     	            		//下架房源的时候需要分配分机号 2016-11-02
+	     	            		ResultMsg saveBridgeExten = bridgeCallService.deleteBridgeExten(apartmentResult.getApartment_id(), apartmentResult.getHouse_id());
+	     	            		if(saveBridgeExten.getCode()==-1){
+	     	            			return saveBridgeExten;
+	     	            		}
+	     	            		apartmentMapper.updateByPrimaryKey(apartmentResult);
+	     	            	}
+	                 	}
+	                 	return ResultMsg.createOkMsg("修改成功");
+	            }
+            }
+            
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+		return ResultMsg.createErrorMsg("不存在申请");
+    }
+    
+    
+    /**
+     * 楼盘房屋信息-列表
+     *
+     * @param pageData
+     * @return ResultObjectMsg<PagingHelper<House>>
+     */
+    public ResultObjectMsg<PagingHelper<House>> searchHouse(Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+        if (null != sessionVo) {
+            SysUser sysUser = sessionVo.getSysUser();
+            pageData.put("current_city_code", sysUser.getCurrent_city_code());
+        }
+
+        PagingHelper<House> ph = new PagingHelper<House>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+        List<House> list = onlineHouseMapper.searchHouseList(pageData);
+        Integer count = onlineHouseMapper.countSearchHouse(pageData);
+
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<House>>(ph);
+    }
+
+    
+    
+    /**
+     * 整租房源信息-保存
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultMsg addOnlineHouseToTags(OnlineHouseInfo onlineHouseInfo, SessionVo sessionVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+            if (null == onlineHouseInfo || (null == onlineHouseInfo.getApartment_id() && null == onlineHouseInfo.getHouse_id())) {
+                return ResultMsg.createErrorMsg("缺少房源ID.");
+            }
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            OnlineHouseInfo selectOnlineHouseInfoDetail= new OnlineHouseInfo();
+            
+	        selectOnlineHouseInfoDetail = onlineHouseInfoMapper.selectOnlineHouseInfoDetail(onlineHouseInfo.getApartment_id());
+	        ArrayList<OnlineHouseCategory> categoryList= onlineHouseInfo.getCategoryList();
+	        if(categoryList!=null){
+	        	for (OnlineHouseCategory onlineHouseCategory : categoryList) {
+	        		//防止重复数据 首先删除
+	        		HashMap<String, String> map = new HashMap<String, String>();
+	        		map.put("info_id", selectOnlineHouseInfoDetail.getInfo_id());
+	        		map.put("recommended_type", onlineHouseCategory.getRecommended_type());
+	        		onlineHouseCategoryMapper.deleteByInfoIdAndType(map);
+	        		String categoryId = UuidUtil.getUUID();
+	        		onlineHouseCategory.setCategory_id(categoryId);
+	        		onlineHouseCategory.setInfo_id(selectOnlineHouseInfoDetail.getInfo_id());
+	        		onlineHouseCategory.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+	        		onlineHouseCategory.setCreate_uid(sysUser.getUser_id());
+	        		onlineHouseCategoryMapper.insert(onlineHouseCategory);
+	        		ArrayList<OnlineHouseRecommended> recommendedTagList = onlineHouseCategory.getRecommendedTagList();
+	        		if(recommendedTagList!=null){
+	        			for (OnlineHouseRecommended onlineHouseRecommended : recommendedTagList) {
+	        				//删除老数据
+	        				HashMap<String, String> map2 = new HashMap<String, String>();
+	    	        		map2.put("category_id", categoryId);
+	    	        		map2.put("config_code", onlineHouseRecommended.getConfig_code());
+	    	        		onlineHouseRecommendedMapper.deleteByCategoryIdAndCode(map2);
+	        				//插入首页推荐信息
+                      		String  recommendedId = UuidUtil.getUUID();
+                      		onlineHouseRecommended.setCategory_id(categoryId);
+                      		onlineHouseRecommended.setRecommended_id(recommendedId);
+                      		onlineHouseRecommended.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                      		onlineHouseRecommended.setCreate_uid(sysUser.getUser_id());
+                      		onlineHouseRecommendedMapper.insert(onlineHouseRecommended);
+						}
+	        		}
+				}
+	        }
+	         
+	       return ResultMsg.createOkMsg("修改成功");
+	               
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    
+    /**
+     * 整租房源信息-照片的申请
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultMsg applyHouseImg(ApplyPhoto applyPhoto, SessionVo sessionVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+            if (null == applyPhoto || (null == applyPhoto.getApartment_id())) {
+                return ResultMsg.createErrorMsg("缺少房源ID.");
+            }
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            Apartment apartment= new Apartment();
+           if(DictConstants.RentType.SHARE.getKeyEn().compareTo(applyPhoto.getRentType())==0){
+           	 apartment = apartmentMapper.selectShareHouseByApartmentId(applyPhoto.getApartment_id());
+           }else{
+           	 apartment = apartmentMapper.selectEntireHouseByApartmentId(applyPhoto.getApartment_id());
+           }
+           
+           //装修类型
+           if(DictConstants.RentType.ENTIRE.getKeyEn().equals(apartment.getRent_type())&&DictConstants.ApartmentType.MANAGE.getKeyEn().equals(apartment.getApartment_type())){
+           }else{
+           	if(DictConstants.FitmentStatus.FITMENTING.getKeyEn().equals(apartment.getFitment_status())){//装修状态
+           		return ResultMsg.createErrorMsg("装修中的房源无法申请拍照，请确认已交房再申请拍照！");
+           	}
+           }
+           
+            
+            ApplyPhoto photo = applyPhotoMapper.selectByApartmentId(applyPhoto.getApartment_id());
+            if(photo==null){
+            	OnlineHouseInfo selectOnlineHouseInfoDetail= new OnlineHouseInfo();
+                applyPhoto.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                applyPhoto.setCreate_uid(sysUser.getUser_id());
+                applyPhoto.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                applyPhoto.setUpdate_uid(sysUser.getUser_id());
+                String uuid = UuidUtil.getUUID();
+                applyPhoto.setApply_id(uuid);
+                applyPhoto.setStatus(DictConstants.ApplyPhotoStatus.APPLYING.getKeyEn());
+                applyPhotoMapper.insert(applyPhoto);
+    	       return ResultMsg.createOkMsg("修改成功");
+            }else if(photo!=null&&DictConstants.ApplyPhotoStatus.REJECTED.getKeyEn().compareTo(photo.getStatus())==0){//已经驳回的
+            	photo.setStatus(DictConstants.ApplyPhotoStatus.APPLYING.getKeyEn());
+            	photo.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            	photo.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            	photo.setCreate_uid(sysUser.getUser_id());
+            	photo.setUpdate_uid(sysUser.getUser_id());
+            	photo.setReject_remark(null);
+            	applyPhotoMapper.updateByPrimaryKey(photo);
+            	return ResultMsg.createOkMsg("修改成功");
+            }else{
+            	return ResultMsg.createErrorMsg("您已经申请提交，不可重复提交！");
+            }
+            
+            
+	               
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    
+    
+    
+
+    /**
+     * 整租房源-列表
+     *
+     * @param pageData
+     * @return
+     * @throws Exception
+     */
+    public ResultObjectMsg<PagingHelper<Apartment>> searchApplyPhotoApartmentList(Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+        if (null != sessionVo) {
+            SysUser sysUser = sessionVo.getSysUser();
+            pageData.put("current_city_code", sysUser.getCurrent_city_code());
+        }
+        
+        if("issure_audit_status".equals(pageData.get("sort"))){
+        	pageData.put("sort", "ap.status");
+        }
+        
+        List<String> paraList = new ArrayList<String>();
+        	
+        // 出租状态(多选)
+        paraList.add("rent_status_search");
+        // 激活类型(多选)
+        paraList.add("activated_type_search");
+        // 公寓名称
+        paraList.add("apartment_kind_search");
+        // 朝向
+        paraList.add("orientation_search");
+        // 装修
+        paraList.add("fitment_type_search");
+        // 物业类型
+        paraList.add("property_type_search");
+        // 物业用途
+        paraList.add("property_use_search");
+        // 公寓类型
+        paraList.add("apartment_type_search");
+        // 装修状态
+        paraList.add("fitment_status_search");
+        // 着火状态
+        paraList.add("fire_status_search");
+        // 改造方式
+        paraList.add("reform_way_search");
+        // 看房方式
+        paraList.add("look_type_search");
+        // 签约部门
+        String signDepIds = ParameterUtil.getString(pageData, "sign_dept_search", "");
+        if (StringUtils.isNotBlank(signDepIds)) {
+            signDepIds = userService.getChildDepIds(signDepIds);
+            pageData.put("sign_dept_search", signDepIds);
+        }
+        paraList.add("sign_dept_search");
+        paraList.add("sign_uid_search");
+        paraList.add("business_circle_search");
+        paraList.add("area_code_search");
+        // 责任部门
+        String responseDepIds = ParameterUtil.getString(pageData, "dept_response_search", "");
+        if (StringUtils.isNotBlank(responseDepIds)) {
+            responseDepIds = userService.getChildDepIds(responseDepIds);
+            pageData.put("dept_response_search", responseDepIds);
+        }
+
+        pageData = StringUtil.readAndWritePageData(pageData, paraList);
+
+
+        PagingHelper<Apartment> ph = new PagingHelper<Apartment>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<Apartment> list = onlineApartmentMapper.searchPhotoApartmentList(pageData);
+        /*for (Apartment apartment : list) {
+            apartment.setBusinessCircleList(apartment.getBusinessCircleList());
+        }*/
+        Integer count = onlineApartmentMapper.countSearchPhotoApartment(pageData);
+
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<Apartment>>(ph);
+    }
+    
+    
+    
+    /**
+     * 照片管理-完成发布
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultMsg finishPhoto(ApplyPhoto applyPhoto, SessionVo sessionVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+            if (null == applyPhoto || (null == applyPhoto.getApartment_id())) {
+                return ResultMsg.createErrorMsg("缺少房源ID.");
+            }
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            String rentType = applyPhoto.getRentType();
+            String apartmentId = applyPhoto.getApartment_id();
+            Apartment apartment = new Apartment();
+            
+            if(DictConstants.RentType.SHARE.getKeyEn().compareTo(rentType)==0){
+           	 apartment = apartmentMapper.selectShareHouseByApartmentId(apartmentId);
+           }else{
+           	 apartment = apartmentMapper.selectEntireHouseByApartmentId(apartmentId);
+           }
+            //照片数量
+            
+            // 托管公寓下的出租房源配置-出租房源图片
+               if (DictConstants.ApartmentType.MANAGE.value().equals(apartment.getApartment_type())) {
+                   apartment.setHouseConfigurationList(apartment.getHouseConfigurationList());
+                   apartment.setHouseImgList(apartment.getHouseImgList());
+                   
+                   if(DictConstants.RentType.SHARE.getKeyEn().equals(apartment.getRent_type())){
+                	   if(apartment.getHouseRoomImgList()!=null&&apartment.getHouseRoomImgList().size()>=1){
+                       }else{
+                    		return ResultMsg.createErrorMsg("请上传至少一张图片");
+                       }
+                   }else{
+                	   if(apartment.getHouseImgList()!=null&&apartment.getHouseImgList().size()>=1){
+                       }else{
+                    		return ResultMsg.createErrorMsg("请上传至少一张图片");
+                       }
+                   }
+                   
+                   
+                   
+                   
+               }
+               // 品牌公寓下的房间配置
+               if (DictConstants.ApartmentType.BRAND.value().equals(apartment.getApartment_type())) {
+                   // 公共区域
+                   apartment.setHouseRoomPublicConfigurationList(houseRoomConfigurationMapper.selectPublicByHouseId(apartment.getHouse_id()));
+                   // 卧室
+                   apartment.setHouseRoomConfigurationList(houseRoomConfigurationMapper.selectRoomByHouseId(apartment.getHouse_id()));
+                   // 户型图和室内图[公共区域]
+                   Map<String, Object> publicHouseRoomImgsMap = new HashMap<String, Object>();
+                   publicHouseRoomImgsMap.put("house_id", apartment.getHouse_id());
+                   publicHouseRoomImgsMap.put("house_contract_id", apartment.getHouse_contract_id());
+                   if(DictConstants.RentType.SHARE.getKeyEn().compareTo(rentType)!=0){
+                	   apartment.setHouseRoomImgList(houseRoomImgMapper.selectPublicByHouseIdContractId(publicHouseRoomImgsMap));
+                   }
+                   if(apartment.getHouseRoomImgList()!=null&&apartment.getHouseRoomImgList().size()>=1){
+                	   
+                   }else{
+                	   return ResultMsg.createErrorMsg("请上传至少一张图片");
+                   }
+                   
+               }
+            
+            
+            //进行修改操作
+            ApplyPhoto applyPhotoBean = applyPhotoMapper.selectByApartmentId(applyPhoto.getApartment_id());
+            applyPhotoBean.setStatus(applyPhoto.getStatus());
+            applyPhotoBean.setFinish_time(DateUtil.getCurrentDateTimeAsString());
+            applyPhotoBean.setFinish_uid(sysUser.getUser_id());
+            applyPhotoBean.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            applyPhotoBean.setUpdate_uid(sysUser.getUser_id());
+            applyPhotoMapper.updateByPrimaryKey(applyPhotoBean);
+	        return ResultMsg.createOkMsg("修改成功");
+            
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    
+    
+    /**
+     * 照片管理-驳回
+     *
+     * @param apartment
+     * @param sessionVo
+     */
+    @Transactional
+    public ResultMsg rejectPhoto(ApplyPhoto applyPhoto, SessionVo sessionVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+            if (null == applyPhoto || (null == applyPhoto.getApartment_id())) {
+                return ResultMsg.createErrorMsg("缺少房源ID.");
+            }
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            //进行修改操作
+            ApplyPhoto applyPhotoBean = applyPhotoMapper.selectByApartmentId(applyPhoto.getApartment_id());
+            //驳回状态
+            applyPhotoBean.setStatus(DictConstants.ApplyPhotoStatus.REJECTED.getKeyEn());
+            applyPhotoBean.setFinish_time(null);
+            applyPhotoBean.setFinish_uid(null);
+            applyPhotoBean.setReject_remark(applyPhoto.getReject_remark());
+            applyPhotoBean.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            applyPhotoBean.setUpdate_uid(sysUser.getUser_id());
+            applyPhotoMapper.updateByPrimaryKey(applyPhotoBean);
+	        return ResultMsg.createOkMsg("修改成功");
+            
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 查询资料房源列表
+     * @param pageData
+     * @return
+     */
+	public ResultObjectMsg<PagingHelper<House>> searchHouseList(Map<String, Object> pageData) {
+
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 30);
+        int page_start = (page_num - 1) * page_size;
+        page_start = page_start < 0 ? 0 : page_start;
+
+        SolrClient solrClient = solrClientUtil.getSolrClient(SOLR_CORE);
+        SolrQuery query = new SolrQuery().setHighlight(true);
+        query.setStart(0);
+        query.setRows(1);
+        query.setQuery("*:*");
+        QueryResponse rsp = null;
+        PagingHelper<House> pagingHelper = new PagingHelper<>();
+        try {
+            if (pageData.containsKey("city_code_search")) {
+                query.addFilterQuery("city_code:" + pageData.get("city_code_search"));
+            }
+
+            /**
+             * 加入条件
+             */
+            Iterator<Entry<String, Object>> iterator = pageData.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Object> entry = (Map.Entry<String, Object>) iterator
+                        .next();
+                if (entry.getKey().indexOf("other") >= 0 || "date_end_search".equals(entry.getKey()) || "date_start_search".equals(entry.getKey())
+                        ) {
+                    continue;
+                } else if ("contact_tel_search".equals(entry.getKey())) {
+                    query.addFilterQuery("telephone_numbers:*," + SolrClientUtil.escapeQueryChars(entry.getValue()) + ",*");
+                }
+                //商圈
+                else if ("business_circle_search".equals(entry.getKey())) {
+                    String[] values = entry.getValue().toString().split(",");
+                    StringBuffer querys = new StringBuffer();
+                    for (String string : values) {
+                        if (querys.length() > 0) {
+                            querys.append(" OR ");
+                        }
+                        querys.append("business_circle_ids:*," + SolrClientUtil.escapeQueryChars(string) + ",*");
+                    }
+                    query.addFilterQuery("(" + querys.toString() + ")");
+                }
+                //楼盘
+                else if ("residential_name_house_code_search".equals(entry.getKey())) {
+                    StringBuffer querys = new StringBuffer();
+                    querys.append("residential_name:*" + SolrClientUtil.escapeQueryChars(entry.getValue()) + "*");//楼盘
+                    querys.append(" OR ");
+                    querys.append("house_code:*" + SolrClientUtil.escapeQueryChars(entry.getValue()) + "*");//房源编号
+                    querys.append(" OR ");
+                    querys.append("byname:*" + SolrClientUtil.escapeQueryChars(entry.getValue()) + "*");//楼盘别名
+                    querys.append(" OR ");
+                    querys.append("address:*" + SolrClientUtil.escapeQueryChars(entry.getValue()) + "*");//楼盘地址
+                    query.addFilterQuery("(" + querys.toString() + ")");
+                } else {
+
+                    String field = entry.getKey().replace("_start_search", "").replace("_end_search", "").replace("_like_search", "").replace("_search", "");
+                    //if(fieldSet!=null && fieldSet.contains(field) && entry.getValue()!=null){
+                    if (entry.getKey().lastIndexOf("_search") > 0 && "_search".equals(entry.getKey().substring(entry.getKey().lastIndexOf("_search")))) {
+
+                        if ("belong_did_search".equals(entry.getKey())) {
+
+                            String depids = userService.getChildDepIds(pageData.get("belong_did_search").toString());
+                            String[] values = depids.split(",");
+                            StringBuffer querys = new StringBuffer();
+                            for (String string : values) {
+                                if (querys.length() > 0) {
+                                    querys.append(" OR ");
+                                }
+                                querys.append("belong_did:" + SolrClientUtil.escapeQueryChars(string) + "");
+                            }
+                            query.addFilterQuery("(" + querys.toString() + ")");
+
+                            continue;
+                        }
+
+                        /**
+
+                         if("house_status_search".equals(entry.getKey())){
+
+                         Object status=pageData.get("house_status_search");
+
+                         if(status!=null){
+                         List<String> list=Arrays.asList(status.toString().split(","));
+                         if(list.contains("BOOKED") && list.contains("WAITING_RENT")){
+
+                         Object category=pageData.get("category_search");
+
+                         if(category!=null){
+
+                         String[] values =category.toString().split(",");
+                         StringBuffer querys = new StringBuffer();
+                         for (String string : values) {
+                         if(querys.length()>0){
+                         querys.append(" OR ");
+                         }
+                         querys.append("category:"+SolrClientUtil.escapeQueryChars(string)+"");
+                         }
+
+                         query.addFilterQuery("(house_status:BOOKED OR (house_status:WAITING_RENT AND ("+querys+")))");
+
+                         }else{
+                         query.addFilterQuery("(house_status:BOOKED OR house_status:WAITING_RENT)");
+                         }
+
+                         }else if(list.contains("BOOKED")){
+
+                         query.addFilterQuery("(house_status:BOOKED)");
+
+                         }else{
+
+
+                         Object category=pageData.get("category_search");
+
+                         if(category!=null){
+
+                         String[] values =category.toString().split(",");
+                         StringBuffer querys = new StringBuffer();
+                         for (String string : values) {
+                         if(querys.length()>0){
+                         querys.append(" OR ");
+                         }
+                         querys.append("category:"+SolrClientUtil.escapeQueryChars(string)+"");
+                         }
+
+                         query.addFilterQuery("(house_status:WAITING_RENT AND ("+querys+"))");
+
+                         }else{
+                         query.addFilterQuery("(house_status:WAITING_RENT)");
+                         }
+
+                         }
+                         }else{
+                         Object category=pageData.get("category_search");
+
+                         if(category!=null){
+
+                         String[] values =category.toString().split(",");
+                         StringBuffer querys = new StringBuffer();
+                         for (String string : values) {
+                         if(querys.length()>0){
+                         querys.append(" OR ");
+                         }
+                         querys.append("category:"+SolrClientUtil.escapeQueryChars(string)+"");
+                         }
+
+                         query.addFilterQuery("("+querys+")");
+
+                         }
+                         }
+
+                         continue;
+                         }
+
+                         if("category_search".equals(entry.getKey())){
+                         continue;
+                         }
+
+                         **/
+                        if (entry.getValue().toString().split(",").length > 1) {
+                            String[] values = entry.getValue().toString().split(",");
+                            StringBuffer querys = new StringBuffer();
+                            for (String string : values) {
+                                if (querys.length() > 0) {
+                                    querys.append(" OR ");
+                                }
+                                if (entry.getKey().lastIndexOf("_like_search") > 0) {
+                                    querys.append(field + ":*" + SolrClientUtil.escapeQueryChars(string) + "*");
+                                } else if (entry.getKey().lastIndexOf("_start_search") > 0) {
+                                    querys.append(field + ":[" + SolrClientUtil.escapeQueryChars(string) + " TO *]");
+                                } else if (entry.getKey().lastIndexOf("_end_search") > 0) {
+                                    querys.append(field + ":[* TO " + SolrClientUtil.escapeQueryChars(string) + "]");
+                                } else {
+                                    querys.append(field + ":" + SolrClientUtil.escapeQueryChars(string));
+                                }
+                            }
+                            query.addFilterQuery("(" + querys.toString() + ")");
+                        } else {
+                            if (entry.getKey().lastIndexOf("_like_search") > 0) {
+                                if ("residential_department_did_like_search".equals(entry.getKey())) {
+
+                                    String depids = userService.getChildDepIds(pageData.get("residential_department_did_like_search").toString());
+                                    String[] values = depids.split(",");
+                                    StringBuffer querys = new StringBuffer();
+                                    for (String string : values) {
+                                        if (querys.length() > 0) {
+                                            querys.append(" OR ");
+                                        }
+                                        querys.append("residential_department_did:" + "*" + SolrClientUtil.escapeQueryChars(string) + "*");
+                                    }
+                                    query.addFilterQuery("(" + querys.toString() + ")");
+
+                                    continue;
+                                }
+                                query.addFilterQuery(field + ":*" + SolrClientUtil.escapeQueryChars(entry.getValue()) + "*");
+                            } else if (entry.getKey().lastIndexOf("_time_start_search") > 0 || entry.getKey().lastIndexOf("_date_start_search") > 0) {
+                                query.addFilterQuery(field + ":[" + SolrClientUtil.escapeQueryChars(entry.getValue()) + " TO *]");
+                            } else if (entry.getKey().lastIndexOf("_time_end_search") > 0 || entry.getKey().lastIndexOf("_date_end_search") > 0) {
+                                String endSearchTo = DateUtil.dateToString(DateUtil.addDays(DateUtil.parse((String) entry.getValue(), DateUtil.DATE_FORMAT_PATTERN), 1), DateUtil.DATE_FORMAT_PATTERN);
+                                query.addFilterQuery(field + ":[* TO " + endSearchTo + "]");
+                            } else if (entry.getKey().lastIndexOf("_start_search") > 0 && entry.getKey().lastIndexOf("_time_start_search") <= 0 && entry.getKey().lastIndexOf("_date_start_search") <= 0) {
+                                query.addFilterQuery(field + ":[" + SolrClientUtil.escapeQueryChars(entry.getValue()) + " TO *]");
+                            } else if (entry.getKey().lastIndexOf("_end_search") > 0 && entry.getKey().lastIndexOf("_time_end_search") <= 0 && entry.getKey().lastIndexOf("_date_end_search") <= 0) {
+                                query.addFilterQuery(field + ":[* TO " + SolrClientUtil.escapeQueryChars(entry.getValue()) + "]");
+                            } else {
+                                query.addFilterQuery(field + ":" + SolrClientUtil.escapeQueryChars(entry.getValue()));
+                            }
+
+                        }
+
+                    }
+                }
+            }
+            //**默认的普单条件
+            // query.addFilterQuery( "image_times: [ 5 TO *]" );
+            query.addFilterQuery("house_status:(WAITING_RENT  OR BOOKED)");
+            query.addFilterQuery("web_manager_uid:*");
+            if (pageData.containsKey("audit_status")) {
+                query.addFilterQuery("issure_audit_status:" + pageData.get("audit_status"));
+            } else {
+                query.addFilterQuery("(-issure_audit_status:APPLE_REJECTED OR -issure_audit_status:APPLE_ISSURE)");
+            }
+
+            // 默认的普单审核限制条件 BY SZP
+            query.addFilterQuery("-fitment_type:(NULL OR '')");
+            query.addFilterQuery("rooms:[1 TO *]");
+            query.addFilterQuery("((build_area:[20 TO 50] AND rental_price:[1000 TO *]) OR (build_area:[50 TO 70] AND rental_price:[1500 TO *]) OR (build_area:[70 TO 90] AND rental_price:[2000 TO *]) OR (build_area:[90 TO 120] AND rental_price:[2500 TO *]) OR (build_area:[120 TO 140] AND rental_price:[3000 TO *]) OR (build_area:[140 TO *] AND rental_price:[3500 TO *]) OR build_area:[250 TO *])");
+
+            query.setStart(page_start);
+            query.setRows(page_size);
+            query.addSort(pageData.get("sort").toString(), "DESC".equalsIgnoreCase(pageData.get("order").toString()) ? ORDER.desc : ORDER.asc);
+            rsp = solrClient.query(query, SolrRequest.METHOD.POST);
+            SolrDocumentList docsCount = rsp.getResults();
+            int totalRowSize = (int) docsCount.getNumFound();
+            List<House> houses = rsp.getBeans(House.class);
+            pagingHelper.setTotal(totalRowSize);
+            pagingHelper.setRows(houses);
+        } catch (SolrServerException | IOException e) {
+            e.printStackTrace();
+        }
+		return new ResultObjectMsg<PagingHelper<House>>(pagingHelper);
+	}
+}

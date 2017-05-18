@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.FitmentHouseMapper">
+	<!-- 根据合同查询装修房屋 -->
+	<select id="selectByContractId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.FitmentHouse">
+		SELECT 
+			fh.fitment_id,
+			fh.contract_id,
+			fh.house_id,
+			fh.reform_way,
+			fh.apartment_kind,
+			fh.total_cost,
+			fh.fitment_style,
+			fh.fitment_status,
+			fh.fitment_uid,
+			fh.remark,
+			fh.is_active,
+			fh.create_time,
+			fh.create_uid,
+			fh.update_time,
+			fh.update_uid,
+			fh.decorate_start_date,
+			fh.hard_delivery_date,
+			fh.set_delivery_date,
+			fh.rooms,
+			fh.livings,
+			fh.kitchens,
+			fh.bathrooms,
+			fh.balconys
+ 		FROM fitment_house fh WHERE fh.contract_id=#{contract_id}
+	</select>
+	<!-- 插入一条数据 -->
+	<insert id="insertFitmentHouse" parameterType="com.isz.erp.facade.house.entity.FitmentHouse">
+		INSERT INTO `fitment_house` 
+		(fitment_id,contract_id, house_id, reform_way, apartment_kind, total_cost, fitment_style, fitment_status, fitment_uid, remark, is_active, create_time, create_uid, update_time, update_uid,decorate_start_date,hard_delivery_date,set_delivery_date, `rooms`, `livings`, `kitchens`, `bathrooms`, `balconys`)
+		VALUES 
+		(#{fitment_id},#{contract_id}, #{house_id}, #{reform_way}, #{apartment_kind}, #{total_cost}, #{fitment_style}, #{fitment_status}, #{fitment_uid}, #{remark}, #{is_active}, #{create_time}, #{create_uid}, #{update_time}, #{update_uid},#{decorate_start_date},#{hard_delivery_date},#{set_delivery_date},#{rooms},#{livings},#{kitchens},#{bathrooms},#{balconys})
+	</insert>
+	<!-- 查询装修历史 -->
+	<select id="selectFitmentHistoryList" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.entity.FitmentHouse">
+		SELECT
+			fh.fitment_id,
+			fh.contract_id,
+			fh.house_id,
+			fh.reform_way,
+			fh.apartment_kind,
+			fh.total_cost,
+			fh.fitment_style,
+			fh.fitment_status,
+			fh.fitment_uid,
+			fh.remark,
+			fh.is_active,
+			fh.create_time,
+			fh.create_uid,
+			fh.update_time,
+			fh.update_uid,
+			fh.decorate_start_date,
+			fh.hard_delivery_date,
+			fh.set_delivery_date,
+			su.user_name create_user_name,
+			hc.contract_num contract_num,
+			fh.rooms,
+			fh.livings,
+			fh.kitchens,
+			fh.bathrooms,
+			fh.balconys
+		FROM
+		fitment_house AS fh 
+		INNER JOIN house_contract hc ON fh.contract_id=hc.contract_id
+		LEFT JOIN sys_user su ON su.user_id=fh.create_uid
+		WHERE fh.house_id=#{house_id}
+	</select>
+	<select id="countSelectFitmentHistory" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+			COUNT(fh.fitment_id)
+		FROM
+		fitment_house AS fh 
+		INNER JOIN house_contract hc ON fh.contract_id=hc.contract_id
+		LEFT JOIN sys_user su ON su.user_id=fh.create_uid
+		WHERE fh.house_id=#{house_id}
+	</select>
+</mapper>

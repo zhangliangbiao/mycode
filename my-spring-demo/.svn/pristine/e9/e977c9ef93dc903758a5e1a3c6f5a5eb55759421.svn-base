@@ -1,0 +1,1581 @@
+package com.isz.erp.house.biz;
+
+import java.math.BigDecimal;
+import java.util.*;
+
+import com.isz.erp.common.util.*;
+import com.isz.erp.facade.user.vo.SessionVo;
+import org.apache.log4j.lf5.viewer.FilteredLogTableModel;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.facade.achievement.enums.ConfigFactorEnum;
+import com.isz.erp.facade.achievement.enums.ConfigParentTypeEnum;
+import com.isz.erp.facade.achievement.enums.ConfigTypeEnum;
+import com.isz.erp.facade.achievement.service.AchievementConfigRedisService;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.house.entity.FitmentHouse;
+import com.isz.erp.facade.house.entity.FitmentRoom;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.HouseRent;
+import com.isz.erp.facade.house.entity.HouseRoom;
+import com.isz.erp.facade.house.entity.HouseRoomConfiguration;
+import com.isz.erp.facade.house.entity.HouseRoomFeature;
+import com.isz.erp.facade.house.entity.HouseRoomFunc;
+import com.isz.erp.facade.house.entity.HouseRoomImg;
+import com.isz.erp.facade.house.vo.BreaksUpHouseVo;
+import com.isz.erp.facade.house.vo.HouseContractVo;
+import com.isz.erp.facade.user.entity.SysDistrict;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.facade.user.service.DistrictService;
+import com.isz.erp.facade.user.service.RedisService;
+import com.isz.erp.house.mapper.ApartmentMapper;
+import com.isz.erp.house.mapper.FitmentHouseMapper;
+import com.isz.erp.house.mapper.FitmentRoomMapper;
+import com.isz.erp.house.mapper.HouseContractVoMapper;
+import com.isz.erp.house.mapper.HouseMapper;
+import com.isz.erp.house.mapper.HouseRentMapper;
+import com.isz.erp.house.mapper.HouseRoomConfigurationMapper;
+import com.isz.erp.house.mapper.HouseRoomFeatureMapper;
+import com.isz.erp.house.mapper.HouseRoomFuncMapper;
+import com.isz.erp.house.mapper.HouseRoomImgMapper;
+import com.isz.erp.house.mapper.HouseRoomMapper;
+
+/**
+ * 设计工程业务逻辑
+ *
+ * @author SZP * zhipenglees@gmail.com
+ * @version 1.0 *
+ * @date 创建时间：2016年3月5日 上午10:14:04 *
+ * @instruction 说明：设计工程业务逻辑
+ */
+@Service("designServiceBiz")
+public class DesignServiceBiz {
+
+    @Autowired
+    private HouseContractVoMapper houseContractVoMapper;
+
+    @Autowired
+    private FitmentHouseMapper fitmentHouseMapper;
+
+    @Autowired
+    private FitmentRoomMapper fitmentRoomMapper;
+
+    @Autowired
+    private HouseMapper houseMapper;
+
+    @Autowired
+    private HouseRentMapper houseRentMapper;
+
+    @Autowired
+    private DistrictService districtService;
+
+    @Autowired
+    private RedisService redisService;
+
+    @Autowired
+    private HouseRoomConfigurationMapper houseRoomConfigurationMapper;
+
+    @Autowired
+    private HouseRoomImgMapper houseRoomImgMapper;
+
+    @Autowired
+    private HouseRoomMapper houseRoomMapper;
+
+    @Autowired
+    private ApartmentMapper apartmentMapper;
+
+    @Autowired
+    private HouseRoomFuncMapper houseRoomFuncMapper;
+
+    @Autowired
+    private HouseRoomFeatureMapper houseRoomFeatureMapper;
+
+    @Autowired
+    private ApartmentServiceBiz apartmentServiceBiz;
+
+    @Autowired
+    private AchievementConfigRedisService achievementConfigRedisService;
+
+    /**
+     * 设计工程-委托合同列表
+     *
+     * @param pageData
+     * @return ResultObjectMsg<PagingHelper<HouseContractVo>>
+     */
+    public ResultObjectMsg<PagingHelper<HouseContractVo>> searchHouseContractVoList(Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        // 数据权限 -- 托管合租
+        if (DictConstants.DataType.MANAGESHARE.value().equals((String) pageData.get("apartment_entrust_type"))) {
+            SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+            if (null != sessionVo) {
+                // 委托合同签约人
+                String permType = sessionVo.getRoleDataPermType(DictConstants.DataType.MANAGESHARE.value());
+
+                if (StringUtil.isNullOrEmpty(permType) || permType.equals(DictConstants.PermType.PERSON.value())) {
+                    pageData.put("permValue", sessionVo.generateUserSQL(DictConstants.DataType.MANAGESHARE.value()));
+                    pageData.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.MANAGESHARE.value()));
+                } else if (permType.equals(DictConstants.PermType.DEPARTMENT.value())) {
+                    pageData.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.MANAGESHARE.value()));
+                }
+                String current_dep_id = ParameterUtil.getString(pageData, "current_dep_id", null);
+                pageData.put("deptValue", sessionVo.generatePositionDeptSQL(DictConstants.DataType.MANAGESHARE.value(), pageData.get("deptValue") != null ? pageData.get("deptValue").toString() : "", current_dep_id));
+            }
+        }
+
+        PagingHelper<HouseContractVo> ph = new PagingHelper<HouseContractVo>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<HouseContractVo> list = houseContractVoMapper.searchHouseContractVoList(pageData);
+        if (null != list && list.size() > 0) {
+            for (HouseContractVo houseContractVo : list) {
+                // 如果已提交终止状态，将identifier置为END(页面只能查看不可编辑，隐藏保存按钮)
+                // 如果是新的相同公寓类型的委托合同，将identifier置为NEW(页面显示激活房源和重新装修)
+                // 如果不是上面两种情况，将identifier置为GEN(页面可新增可编辑)
+
+                // 委托合同新签或者续签后已装修
+                if (DictConstants.HouseContractType.NEWSIGN.value().equals(houseContractVo.getContract_type()) || (DictConstants.HouseContractType.RENEWSIGN.value().equals(houseContractVo.getContract_type()) && null != houseContractVo.getFitment_id())) {
+                    // 1.判断是否终止
+                    if (!"".equals(DicTools.getCnValue(DictConstants.HouseEndType.getDictId(), houseContractVo.getContract_status()))) {
+                        houseContractVo.setIdentifier("END");// 终止
+                    } else {
+                        // 2.设为NEW或GEN
+                        if (null == houseContractVo.getFitment_id()) {
+                            houseContractVo.setIdentifier("NEW");
+                        } else {
+                            houseContractVo.setIdentifier("GEN");
+                        }
+                    }
+                } else if (DictConstants.HouseContractType.RENEWSIGN.value().equals(houseContractVo.getContract_type()) && null == houseContractVo.getFitment_id()) {
+                    // 委托合同续签
+                    // 1.判断是否终止
+                    if (!"".equals(DicTools.getCnValue(DictConstants.HouseEndType.getDictId(), houseContractVo.getContract_status()))) {
+                        houseContractVo.setIdentifier("END");// 终止
+                    } else {
+                        // 2.判断上一份委托合同的公寓类型与当前委托合同公寓类型是否一致
+                        if (null != houseContractVo.getParent_id()) {
+                            HouseContractVo houseContractVoPre = houseContractVoMapper.selectByContractId(houseContractVo.getParent_id());
+                            // 同类型续签未装修
+                            if (null == houseContractVo.getFitment_id() && null != houseContractVoPre && DictConstants.ApartmentType.BRAND.value().equals(houseContractVoPre.getApartment_type()) && null != houseContractVoPre.getApartment_type() && houseContractVoPre.getApartment_type().equals(houseContractVo.getApartment_type()) && null != houseContractVoPre.getEntrust_type() && houseContractVoPre.getEntrust_type().equals(houseContractVo.getEntrust_type())) {
+                                houseContractVo.setIdentifier("COMMONNEW");
+                                // 判断父委托合同是否已装修
+                                if (null == houseContractVoPre.getFitment_id()) {
+                                    houseContractVo.setIdentifier("NEW");
+                                }
+                            }
+                            // 不同类型续签未装修
+                            if (null == houseContractVo.getFitment_id() && null != houseContractVoPre && (!DictConstants.ApartmentType.BRAND.value().equals(houseContractVoPre.getApartment_type()) || !houseContractVoPre.getApartment_type().equals(houseContractVo.getApartment_type()) || !houseContractVoPre.getEntrust_type().equals(houseContractVo.getEntrust_type()))) {
+                                houseContractVo.setIdentifier("NEW");
+                            }
+                            // 已装修
+                            if (null != houseContractVo.getFitment_id()) {
+                                houseContractVo.setIdentifier("GEN");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Integer count = houseContractVoMapper.countSearchHouseContractVo(pageData);
+
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+
+        ResultObjectMsg<PagingHelper<HouseContractVo>> resultObjectMsg = new ResultObjectMsg<PagingHelper<HouseContractVo>>(ph);
+        if (null != list && list.size() > 0) {
+            SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+            if (null != sessionVo) {
+                for (HouseContractVo houseContractVo : list) {
+                    // 功能数据权限
+                    resultObjectMsg.setPar("DataDesignManageWorkblank_" + houseContractVo.getContract_id(), sessionVo.isEnabled("DesignManageWorkblank", String.valueOf(houseContractVo.getSign_did()), String.valueOf(houseContractVo.getSign_uid())) ? "" : "disabled");
+                }
+            }
+        }
+        return resultObjectMsg;
+    }
+
+    /**
+     * 分割户型
+     *
+     * @param sessionVo
+     * @param breaksUpHouseVo
+     * @return ResultMsg
+     */
+    @Transactional
+    public ResultMsg saveBreaksUpHouse(SessionVo sessionVo, BreaksUpHouseVo breaksUpHouseVo) throws Exception {
+        try {
+            SysUser sysUser = sessionVo.getSysUser();
+            if (null == sysUser || null == breaksUpHouseVo) {
+                return ResultMsg.createErrorMsg("请求参数为空.");
+            }
+            if (null == breaksUpHouseVo.getHouse_id()) {
+                return ResultMsg.createErrorMsg("缺少出租房源ID.");
+            }
+            if (null == breaksUpHouseVo.getContract_id()) {
+                return ResultMsg.createErrorMsg("缺少委托合同ID.");
+            }
+            if (StringUtil.isNullOrEmpty(breaksUpHouseVo.getApartment_type())) {
+                return ResultMsg.createErrorMsg("缺少公寓类型.");
+            }
+            if (StringUtil.isNullOrEmpty(breaksUpHouseVo.getRent_type())) {
+                return ResultMsg.createErrorMsg("缺少出租类型.");
+            }
+            FitmentHouse fitmentHouse = breaksUpHouseVo.getFitmentHouse();
+            if (null == fitmentHouse) {
+                return ResultMsg.createErrorMsg("缺少房屋装修数据.");
+            }
+            // 品牌公寓的公寓名称和装修风格是必填
+            if (DictConstants.ApartmentType.BRAND.value().equals(breaksUpHouseVo.getApartment_type()) && StringUtil.isNullOrEmpty(fitmentHouse.getApartment_kind())) {
+                return ResultMsg.createErrorMsg("请选择公寓名称.");
+            }
+            if (DictConstants.ApartmentType.BRAND.value().equals(breaksUpHouseVo.getApartment_type()) && StringUtil.isNullOrEmpty(fitmentHouse.getFitment_style())) {
+                return ResultMsg.createErrorMsg("请选择装修风格.");
+            }
+            // 托管合租
+//            if (DictConstants.ApartmentType.MANAGE.value().equals(breaksUpHouseVo.getApartment_type()) && (null == fitmentHouse.getTotal_cost() || fitmentHouse.getTotal_cost() <= 0)) {
+//                return ResultMsg.createErrorMsg("请输入装修成本.");
+//            }
+            if (null == fitmentHouse.getContract_id()) {
+                return ResultMsg.createErrorMsg("缺少委托合同ID.");
+            }
+            if (null == fitmentHouse.getRooms() || null == fitmentHouse.getLivings() || null == fitmentHouse.getKitchens() || null == fitmentHouse.getBathrooms() || null == fitmentHouse.getBalconys()) {
+                return ResultMsg.createErrorMsg("请完善新户型数据.");
+            }
+            List<FitmentRoom> fitmentRoomList = breaksUpHouseVo.getFitmentRoomList();
+            if (null == fitmentRoomList || fitmentRoomList.size() < 2) {
+                return ResultMsg.createErrorMsg("请完善公共区域和卧室信息.");
+            }
+            // 公共区域的配置和卧室的必填项校验-前端处理配置信息必填项
+            for (int i = 0; i < fitmentRoomList.size(); i++) {
+                HouseRoom houseRoom = fitmentRoomList.get(i).getHouseRoom();
+                if (null == houseRoom) {
+                    return ResultMsg.createErrorMsg("缺少出租房间信息.");
+                }
+                // 合租卧室
+                if (DictConstants.RentType.SHARE.value().equals(breaksUpHouseVo.getRent_type()) && DictConstants.YesNo.N.value().equals(houseRoom.getPublic_flag())) {
+                    if (StringUtil.isNullOrEmpty(houseRoom.getRoom_no())) {
+                        return ResultMsg.createErrorMsg("请选择卧室房号.");
+                    }
+                    if (null == houseRoom.getRoom_area()) {
+                        return ResultMsg.createErrorMsg("请填写卧室面积.");
+                    }
+                    if (StringUtil.isNullOrEmpty(houseRoom.getRoom_orientation())) {
+                        return ResultMsg.createErrorMsg("请选择卧室朝向.");
+                    }
+                }
+            }
+            // 功能数据权限--托管合租
+            if (DictConstants.ApartmentType.MANAGE.value().equals(breaksUpHouseVo.getApartment_type()) && DictConstants.RentType.SHARE.value().equals(breaksUpHouseVo.getRent_type())) {
+                HouseContractVo houseContractVo = houseContractVoMapper.selectByContractId(fitmentHouse.getContract_id());
+                if (!sessionVo.isEnabled("DesignManageWorkblank", String.valueOf(houseContractVo.getSign_did()), String.valueOf(houseContractVo.getSign_uid()))) {
+                    return ResultMsg.createErrorMsg("请配置分割户型的功能数据权限.");
+                }
+            }
+            // 新增
+            if (null == fitmentHouse.getFitment_id()) {
+                // 1.新增装修房屋-fitment_house
+                // 主键
+                fitmentHouse.setFitment_id(UuidUtil.getUUID());
+
+                // 托管合租-装修状态变为已交房
+                if (DictConstants.ApartmentType.MANAGE.value().equals(breaksUpHouseVo.getApartment_type()) && DictConstants.RentType.SHARE.value().equals(breaksUpHouseVo.getRent_type())) {
+                    fitmentHouse.setFitment_status(DictConstants.FitmentStatus.HANDOVER.value());
+                } else {
+                    fitmentHouse.setFitment_status(DictConstants.FitmentStatus.FITMENTING.value());
+                }
+
+                fitmentHouse.setIs_active(DictConstants.YesNo.Y.value());
+                fitmentHouse.setCreate_uid(sysUser.getUser_id());
+                fitmentHouse.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                fitmentHouse.setUpdate_uid(sysUser.getUser_id());
+                fitmentHouse.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                // 新户型保存到装修表中160511
+                fitmentHouseMapper.insertFitmentHouse(fitmentHouse);
+                if (null == fitmentHouse.getFitment_id()) {
+                    throw new RuntimeException("装修房屋创建失败.");
+                }
+
+                // 2.更新委托合同中的改造方式字段
+                HouseContractVo houseContractVo = houseContractVoMapper.selectByContractId(fitmentHouse.getContract_id());
+                if (!StringUtil.isNullOrEmpty(houseContractVo.getReform_way()) && !houseContractVo.getReform_way().equals(fitmentHouse.getReform_way())) {
+                    Map<String, Object> hcfMap = new HashMap<String, Object>();
+                    hcfMap.put("contract_id", fitmentHouse.getContract_id());
+                    hcfMap.put("reform_way", fitmentHouse.getReform_way());
+                    hcfMap.put("update_time", DateUtil.getCurrentDateTimeAsString());
+                    hcfMap.put("update_uid", sysUser.getUser_id());
+                    houseContractVoMapper.updateHouseContractFitment(hcfMap);
+                }
+
+                // 3.不动house
+                // 如果为重新装修和激活房源，原装修的房屋及所有关联均保留
+                // 新增出租房间-(出租房间配置、图片、合租特色新增)、装修房间、公寓
+                // 新增的时候fitmentRoomList所有house_room的room_id应是NULL
+                if (null != fitmentRoomList && fitmentRoomList.size() > 0) {
+                    for (FitmentRoom fr : fitmentRoomList) {
+                        HouseRoom hr = fr.getHouseRoom();
+                        hr.setRoom_id(null);
+                        fr.setFitment_id(null);
+                    }
+                }
+
+                // 4.设计房间,生成公寓
+                saveHouseRoom(sysUser, breaksUpHouseVo, fitmentRoomList, null);
+                // 托管合租--计算成本
+                closingRoom(sysUser, fitmentHouse);
+            } else {
+                FitmentHouse fitmentHouseOld = fitmentHouseMapper.selectByPrimaryKey(fitmentHouse.getFitment_id());
+                if (null == fitmentHouseOld) {
+                    return ResultMsg.createErrorMsg("当前房屋的装修数据不存在.");
+                }
+                if (StringUtil.isNullOrEmpty(fitmentHouse.getUpdate_time())) {
+                    return ResultMsg.createErrorMsg("缺少更新时间.");
+                }
+                if (!fitmentHouse.getUpdate_time().equals(fitmentHouseOld.getUpdate_time())) {
+                    return ResultMsg.createErrorMsg("用户数据已经被其他用户更新，请返回重新编辑.");
+                }
+                fitmentHouse.setUpdate_uid(sysUser.getUser_id());
+                fitmentHouse.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                // 新户型保存到装修表中160511
+                // 更新fitment_house
+                fitmentHouseMapper.updateByPrimaryKeySelective(fitmentHouse);
+
+                // 更新委托合同中的改造方式字段
+                HouseContractVo houseContractVo = houseContractVoMapper.selectByContractId(fitmentHouse.getContract_id());
+                if (!StringUtil.isNullOrEmpty(houseContractVo.getReform_way()) && !houseContractVo.getReform_way().equals(fitmentHouse.getReform_way())) {
+                    Map<String, Object> hcfMap = new HashMap<String, Object>();
+                    hcfMap.put("contract_id", fitmentHouse.getContract_id());
+                    hcfMap.put("reform_way", fitmentHouse.getReform_way());
+                    hcfMap.put("update_time", DateUtil.getCurrentDateTimeAsString());
+                    hcfMap.put("update_uid", sysUser.getUser_id());
+                    houseContractVoMapper.updateHouseContractFitment(hcfMap);
+                }
+
+                // 不动house
+                String fitmentRoomIds = fitmentRoomMapper.selectFitmentRoomIdsByFitmentId(fitmentHouse.getFitment_id());
+
+                // 删除house_room_configuration\house_room_feature\house_room_img
+                if (!StringUtil.isNullOrEmpty(fitmentRoomIds)) {
+                    fitmentRoomIds = fitmentRoomIds.replaceAll(",", "','");
+                    fitmentRoomIds = "'" + fitmentRoomIds + "'";
+                    Map<String, Object> roomIdsMap = new HashMap<String, Object>();
+                    roomIdsMap.put("roomIds", fitmentRoomIds);
+                    roomIdsMap.put("fitment_id", fitmentHouse.getFitment_id());
+                    // 合租删除house_room_func和house_room_feature
+                    if (DictConstants.RentType.SHARE.value().equals(breaksUpHouseVo.getRent_type())) {
+                        houseRoomFuncMapper.deleteByRoomIds(roomIdsMap);
+                        houseRoomFeatureMapper.deleteByRoomIds(roomIdsMap);
+                    }
+                    houseRoomConfigurationMapper.deleteByRoomIds(roomIdsMap);
+                    // 图片软删除
+                    houseRoomImgMapper.deleteByRoomIds(roomIdsMap);
+                }
+
+                // 装修房间删除
+                fitmentRoomMapper.deleteByFitmentId(fitmentHouse.getFitment_id());
+
+                // 房间软删除
+//                Map<String, Object> pageData = new HashMap<String, Object>();
+//                pageData.put("fitment_id", fitmentHouse.getFitment_id());
+//                pageData.put("update_time", DateUtil.getCurrentDateTimeAsString());
+//                pageData.put("update_uid", sysUser.getUser_id());
+//                houseRoomMapper.deleteByFitmentId(pageData);
+                // 循环新增house_room及house_room_configuration\house_room_feature\house_room_img
+                saveHouseRoom(sysUser, breaksUpHouseVo, fitmentRoomList, fitmentHouseOld);
+                // 托管合租--计算成本
+                closingRoom(sysUser, fitmentHouse);
+            }
+            return ResultMsg.createOkMsg();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 保存出租房间
+     *
+     * @param sysUser
+     * @param breaksUpHouseVo
+     * @param fitmentRoomList
+     * @throws Exception
+     */
+    @Transactional
+    private void saveHouseRoom(SysUser sysUser, BreaksUpHouseVo breaksUpHouseVo, List<FitmentRoom> fitmentRoomList, FitmentHouse fitmentHouseOld) throws Exception {
+        // 整租－保存公共区域和卧室－生成Apartment
+        if (DictConstants.EntrustType.ENTIRE.equals(breaksUpHouseVo.getRent_type())) {
+            saveEntireHouseRoom(sysUser, breaksUpHouseVo, fitmentRoomList, fitmentHouseOld);
+        } else if (DictConstants.EntrustType.SHARE.equals(breaksUpHouseVo.getRent_type())) {
+            saveShareHouseRoom(sysUser, breaksUpHouseVo, fitmentRoomList, fitmentHouseOld);
+        }
+    }
+
+    /**
+     * 合租
+     *
+     * @param sysUser
+     * @param breaksUpHouseVo
+     * @param fitmentRoomList
+     * @throws Exception
+     */
+    @Transactional
+    private void saveShareHouseRoom(SysUser sysUser, BreaksUpHouseVo breaksUpHouseVo, List<FitmentRoom> fitmentRoomList, FitmentHouse fitmentHouseOld) throws Exception {
+        // 合租－保存公共区域和所有卧室－卧室生成合租Apartment
+        if (null != fitmentRoomList && fitmentRoomList.size() > 0) {
+            // 出租房屋信息
+            House house = houseMapper.selectByPrimaryKey(breaksUpHouseVo.getHouse_id());
+            if (null == house) {
+                throw new RuntimeException("出租房源不存在,或查询失败.");
+            }
+            HouseRent houseRent = houseRentMapper.selectByHouseId(breaksUpHouseVo.getHouse_id());
+            if (null == houseRent) {
+                throw new RuntimeException("出租房源出租信息不存在,或查询失败.");
+            }
+            // 委托合同信息
+            HouseContractVo houseContractVo = houseContractVoMapper.selectByContractId(breaksUpHouseVo.getContract_id());
+            if (null == houseContractVo) {
+                throw new RuntimeException("委托合同不存在,或查询失败.");
+            }
+            // 先软删除当前委托合同关联的所有公寓(公寓数据先删后增)[是不对的，应循环判断room_id是否存在，如果已存在则只修改信息不删除新增]
+            // 公寓编号
+            // 通过house_id和public_flag、room_no判断house_room是否存在
+            String apartmentCode = house.getHouse_code();
+            int seq = 0;// 初始为0
+            for (FitmentRoom fitmentRoom : fitmentRoomList) {
+                HouseRoom houseRoom = fitmentRoom.getHouseRoom();
+                String old_room_id = houseRoom.getRoom_id();
+                if (StringUtil.isNullOrEmpty(houseRoom.getPublic_flag())) {
+                    throw new RuntimeException("缺少出租房间是否为公共区域或卧室.");
+                }
+                // 生成房间编号
+                SysDistrict city = districtService.getByCode(house.getCity_code());
+                if (null == city || StringUtil.isNullOrEmpty(city.getAbridge())) {
+                    throw new RuntimeException((null != city ? (city.getName() + "缺少汉语拼音.") : "市区不存在"));
+                }
+                SysDistrict area = districtService.getByCode(house.getArea_code());
+                if (null == area || StringUtil.isNullOrEmpty(area.getAbridge())) {
+                    throw new RuntimeException((null != area ? (area.getName() + "缺少汉语拼音.") : "城区不存在"));
+                }
+                String room_code = redisService.getCode(CodeTypeConstants.HOUSE_ROOM_CODE);
+                if (StringUtil.isNullOrEmpty(room_code)) {
+                    throw new RuntimeException("redisService生成房间编号失败.");
+                }
+                room_code = BusinessCodeUtil.generateCode(CodeTypeConstants.HOUSE_ROOM_CODE + city.getAbridge(), area.getAbridge(), room_code);
+                // 1.新增装修房间
+                // 主键
+                // 如果fitment_room存在则更新
+                fitmentRoom.setFitment_room_id(UuidUtil.getUUID());
+                fitmentRoom.setFitment_id(breaksUpHouseVo.getFitmentHouse().getFitment_id());
+                fitmentRoom.setRoom_id(houseRoom.getRoom_id());
+                fitmentRoom.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                fitmentRoom.setCreate_uid(sysUser.getUser_id());
+                fitmentRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                fitmentRoom.setUpdate_uid(sysUser.getUser_id());
+                fitmentRoom.setRoom_code(room_code);
+                fitmentRoom.setRoom_no(houseRoom.getRoom_no());
+                fitmentRoom.setPublic_flag(houseRoom.getPublic_flag());
+                fitmentRoom.setRoom_area(houseRoom.getRoom_area());
+                fitmentRoom.setRoom_orientation(houseRoom.getRoom_orientation());
+                fitmentRoomMapper.insert(fitmentRoom);
+
+                // 2.保存出租房间
+                Map<String, Object> paramsMap = new HashMap<String, Object>();
+                paramsMap.put("house_id", house.getHouse_id());
+                paramsMap.put("public_flag", houseRoom.getPublic_flag());
+                paramsMap.put("room_no", houseRoom.getRoom_no());
+                HouseRoom houseRoomOld = houseRoomMapper.selectByShareHouseIdAndPublicFlag(paramsMap);
+
+                if (null == houseRoomOld) {
+                    // 保存委托合同ID
+                    houseRoom.setHouse_contract_id(houseContractVo.getContract_id());
+                    houseRoom.setHouse_id(house.getHouse_id());
+                    houseRoom.setResidential_id(house.getResidential_id());
+                    houseRoom.setBuilding_id(house.getBuilding_id());
+                    houseRoom.setCity_code(house.getCity_code());
+                    houseRoom.setArea_code(house.getArea_code());
+
+                    houseRoom.setRoom_code(room_code);
+                    // 主键
+                    houseRoom.setRoom_id(UuidUtil.getUUID());
+                    houseRoom.setIs_active(DictConstants.YesNo.Y.value());
+                    houseRoom.setDeleted(0);
+                    houseRoom.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                    houseRoom.setCreate_uid(sysUser.getUser_id());
+                    houseRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                    houseRoom.setUpdate_uid(sysUser.getUser_id());
+                    houseRoom.setFitment_room_id(fitmentRoom.getFitment_room_id());
+                    houseRoomMapper.insertHouseRoom(houseRoom);
+                    if (null == houseRoom.getRoom_id()) {
+                        throw new RuntimeException("新增出租房间失败.");
+                    }
+                } else {
+                    HouseRoom updatedHouseRoom = new HouseRoom();
+                    updatedHouseRoom.setRoom_id(houseRoomOld.getRoom_id());
+                    updatedHouseRoom.setResidential_id(houseRoomOld.getResidential_id());
+                    updatedHouseRoom.setBuilding_id(houseRoomOld.getBuilding_id());
+                    updatedHouseRoom.setHouse_id(houseRoomOld.getHouse_id());
+                    if (null != fitmentHouseOld && fitmentHouseOld.getContract_id().equals(houseContractVo.getContract_id()) && houseRoomOld.getHouse_contract_id().equals(fitmentHouseOld.getContract_id())) {
+                        updatedHouseRoom.setFitment_room_id(fitmentRoom.getFitment_room_id());
+                    } else {
+                        updatedHouseRoom.setFitment_room_id(houseRoomOld.getFitment_room_id());
+                    }
+                    updatedHouseRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                    updatedHouseRoom.setUpdate_uid(sysUser.getUser_id());
+                    houseRoomMapper.updateByPrimaryKeySelective(updatedHouseRoom);
+
+                    // 更新卧室房间或公共区域的室内图的fitment_room_id
+                    Map<String, Object> updatedHouseRoomImgMap = new HashMap<String, Object>();
+                    updatedHouseRoomImgMap.put("room_id", houseRoomOld.getRoom_id());
+                    if (null != fitmentHouseOld && fitmentHouseOld.getContract_id().equals(houseContractVo.getContract_id()) && houseRoomOld.getHouse_contract_id().equals(fitmentHouseOld.getContract_id())) {
+                        updatedHouseRoomImgMap.put("fitment_room_id", fitmentRoom.getFitment_room_id());
+                    } else {
+                        updatedHouseRoomImgMap.put("fitment_room_id", houseRoomOld.getFitment_room_id());
+                    }
+                    houseRoomImgMapper.updateIndoorImgsFitmentRoomId(updatedHouseRoomImgMap);
+
+                    houseRoom.setRoom_id(houseRoomOld.getRoom_id());
+                    houseRoom.setResidential_id(houseRoomOld.getResidential_id());
+                    houseRoom.setBuilding_id(houseRoomOld.getBuilding_id());
+                    houseRoom.setHouse_id(houseRoomOld.getHouse_id());
+
+                    houseRoom.setFitment_room_id(fitmentRoom.getFitment_room_id());
+
+                    houseRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                    houseRoom.setUpdate_uid(sysUser.getUser_id());
+                }
+
+                // 新增出租房间功能区域和房间特色
+                List<HouseRoomFunc> houseRoomFuncList = houseRoom.getHouseRoomFuncList();
+                if (null != houseRoomFuncList && houseRoomFuncList.size() > 0) {
+                    List<HouseRoomFeature> houseRoomFeatureList = new ArrayList<HouseRoomFeature>();
+                    for (HouseRoomFunc houseRoomFunc : houseRoomFuncList) {
+                        if (null != houseRoomFunc && StringUtil.isNullOrEmpty(houseRoomFunc.getFunc_type())) {
+                            throw new RuntimeException("出租房间缺少功能区类型,只有面积大小.");
+                        }
+                        // 主键
+                        houseRoomFunc.setFunc_id(UuidUtil.getUUID());
+                        houseRoomFunc.setRoom_id(houseRoom.getRoom_id());
+                        houseRoomFunc.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                        houseRoomFunc.setCreate_uid(sysUser.getUser_id());
+                        houseRoomFunc.setFitment_room_id(houseRoom.getFitment_room_id());
+                        HouseRoomFeature houseRoomFeature = new HouseRoomFeature();
+                        // 房间特色
+                        // 主键
+                        houseRoomFeature.setFeature_id(UuidUtil.getUUID());
+                        houseRoomFeature.setRoom_id(houseRoom.getRoom_id());
+                        houseRoomFeature.setFeature_code(houseRoomFunc.getFunc_type());
+                        houseRoomFeature.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                        houseRoomFeature.setCreate_uid(sysUser.getUser_id());
+                        houseRoomFeature.setFitment_room_id(houseRoom.getFitment_room_id());
+                        houseRoomFeatureList.add(houseRoomFeature);
+                    }
+                    houseRoomFuncMapper.saveHouseRoomFunc(houseRoomFuncList);
+                    houseRoomFeatureMapper.saveHouseRoomFeature(houseRoomFeatureList);
+                }
+                // 新增出租房间配置
+                List<HouseRoomConfiguration> houseRoomConfigurationList = houseRoom.getHouseRoomConfigurationList();
+                if (null != houseRoomConfigurationList && houseRoomConfigurationList.size() > 0) {
+                    for (HouseRoomConfiguration houseRoomConfiguration : houseRoomConfigurationList) {
+                        if (StringUtil.isNullOrEmpty(houseRoomConfiguration.getOwner_type())) {
+                            throw new RuntimeException("房间配置缺少所属主体(房东或公司).");
+                        }
+                        houseRoomConfiguration.setConfiguration_id(UuidUtil.getUUID());
+                        houseRoomConfiguration.setRoom_id(houseRoom.getRoom_id());
+                        houseRoomConfiguration.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                        houseRoomConfiguration.setCreate_uid(sysUser.getUser_id());
+                        houseRoomConfiguration.setFitment_room_id(houseRoom.getFitment_room_id());
+                    }
+                    houseRoomConfigurationMapper.saveHouseRoomConfiguration(houseRoomConfigurationList);
+                }
+                if (DictConstants.YesNo.Y.value().equals(houseRoom.getPublic_flag())) {
+                    // 新增出租房间图片(保存在公共区域的house_room关联图片中)
+                    List<HouseRoomImg> houseRoomImgList = houseRoom.getHouseRoomImgList();
+                    List<HouseRoomImg> savedRoomImgList = new ArrayList<HouseRoomImg>();
+                    if (null != houseRoomImgList && houseRoomImgList.size() > 0) {
+                        for (HouseRoomImg houseRoomImg : houseRoomImgList) {
+                            if (null == houseRoomImg.getImg_id()) {
+                                throw new RuntimeException("装修房屋户型图缺少图片ID.");
+                            }
+                            // 室内图不处理
+                            if (DictConstants.ImgType.INDOOR_IMGS.value().equals(houseRoomImg.getImg_type())) {
+                                continue;
+                            }
+                            // 主键
+                            houseRoomImg.setRoom_img_id(UuidUtil.getUUID());
+                            houseRoomImg.setResidential_id(houseRoom.getResidential_id());
+                            houseRoomImg.setBuilding_id(houseRoom.getBuilding_id());
+                            houseRoomImg.setHouse_id(houseRoom.getHouse_id());
+                            houseRoomImg.setRoom_id(houseRoom.getRoom_id());
+                            houseRoomImg.setDeleted(0);
+                            houseRoomImg.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                            houseRoomImg.setCreate_uid(sysUser.getUser_id());
+                            houseRoomImg.setFitment_room_id(houseRoom.getFitment_room_id());
+                            savedRoomImgList.add(houseRoomImg);
+                        }
+                        if (null != savedRoomImgList && savedRoomImgList.size() > 0) {
+                            houseRoomImgMapper.saveHouseRoomImg(savedRoomImgList);
+                        }
+                    }
+                }
+
+                // 出租房间装修记录完成后，卧室-生成合租公寓
+                if (DictConstants.YesNo.N.value().equals(houseRoom.getPublic_flag())) {
+                    // 编辑的时候的old_room_id
+                    if (null == old_room_id) {
+                        // 数据正确的情况下,下面的判断是多余的-0902
+                        Map<String, Object> apartmentParamsMap = new HashMap<String, Object>();
+                        apartmentParamsMap.put("room_id", houseRoom.getRoom_id());
+                        apartmentParamsMap.put("contract_id", houseContractVo.getContract_id());
+                        Apartment apartmentOld = apartmentMapper.selectByRoomIdContractId(apartmentParamsMap);
+                        if (null == apartmentOld || null == apartmentOld.getApartment_id()) {
+                            seq = getSeq(houseContractVo, seq);
+                            generateApartment(sysUser, breaksUpHouseVo, house, houseRent, houseContractVo, houseRoom, generateShareApartmentCode(apartmentCode, seq));
+                        }
+                        // 同一份委托合同走设计工程不做更新-0902
+                    } else {
+                        // 判断apartment是否已经存在
+                        Map<String, Object> apartmentParamsMap = new HashMap<String, Object>();
+                        apartmentParamsMap.put("room_id", old_room_id);
+                        apartmentParamsMap.put("contract_id", houseContractVo.getContract_id());
+                        Apartment apartmentOld = apartmentMapper.selectByRoomIdContractId(apartmentParamsMap);
+                        if (null == apartmentOld || null == apartmentOld.getApartment_id()) {
+                            seq = getSeq(houseContractVo, seq);
+                            generateApartment(sysUser, breaksUpHouseVo, house, houseRent, houseContractVo, houseRoom, generateShareApartmentCode(apartmentCode, seq));
+                        } else {
+                            Apartment apartment = new Apartment();
+                            // 房源方部门、房源方-委托合同签约部门、签约人
+                            apartment.setDid(houseContractVo.getSign_did());
+                            apartment.setUid(houseContractVo.getSign_uid());
+                            // 激活类型、激活日期、激活人
+                            if (!houseContractVo.getContract_type().equals(apartment.getActivated_type())) {
+                                apartment.setActivated_type(houseContractVo.getContract_type());
+                                apartment.setActivated_time(DateUtil.getCurrentDateTimeAsString());
+                                apartment.setActivated_uid(sysUser.getUser_id());
+                            }
+                            apartment.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                            apartment.setUpdate_uid(sysUser.getUser_id());
+                            apartment.setApartment_id(apartmentOld.getApartment_id());
+                            // 更新为新的room_id
+                            apartment.setRoom_id(houseRoom.getRoom_id());
+                            // 更新为新的合租公寓编号
+                            if (seq == 0) {
+                                seq++;
+                            }
+                            apartment.setApartment_code(generateShareApartmentCode(apartmentCode, seq));
+                            apartmentMapper.updateByPrimaryKeySelective(apartment);
+                            apartmentServiceBiz.saveFollow(apartment, apartmentServiceBiz.followContentByEditApartment(apartment, apartmentOld));
+                        }
+                    }
+                    seq++;// 合租公寓编号加1
+                }
+            }
+        }
+    }
+
+    private int getSeq(HouseContractVo houseContractVo, int seq) {
+        Map<String, Object> sqlMap = new HashMap<String, Object>();
+        sqlMap.put("contract_id", houseContractVo.getContract_id());
+        Apartment apartmentSeq = apartmentMapper.selectByRoomIdContractId(sqlMap);
+        if (null != apartmentSeq && null != apartmentSeq.getApartment_code() && apartmentSeq.getApartment_code().contains("-")) {
+            seq = Integer.valueOf(apartmentSeq.getApartment_code().substring(apartmentSeq.getApartment_code().indexOf("-") + 1, apartmentSeq.getApartment_code().length()));
+        }
+        return seq + 1;
+    }
+
+    /**
+     * 合租公寓编号
+     *
+     * @param apartmentCode
+     * @param seq
+     * @return String
+     */
+    private String generateShareApartmentCode(String apartmentCode, int seq) {
+        return apartmentCode + "-" + (seq < 10 ? ("0" + seq) : seq);
+    }
+
+    /**
+     * 生成品牌公寓
+     *
+     * @param sysUser
+     * @param breaksUpHouseVo
+     * @param house
+     * @param houseRent
+     * @param houseContractVo
+     * @param houseRoom
+     * @throws Exception
+     */
+    @Transactional
+    private void generateApartment(SysUser sysUser, BreaksUpHouseVo breaksUpHouseVo, House house, HouseRent houseRent, HouseContractVo houseContractVo, HouseRoom houseRoom, String apartment_code) throws Exception {
+        // 生成Apartment,整租room不进入Apartment关联
+        Apartment apartment = new Apartment();
+        // 主键
+        apartment.setApartment_id(UuidUtil.getUUID());
+        // 设置房间ID--整租room_id为null
+        apartment.setRoom_id(((null != houseRoom) ? houseRoom.getRoom_id() : null));
+        // 楼盘栋座
+        apartment.setResidential_id(house.getResidential_id());
+        apartment.setBuilding_id(house.getBuilding_id());
+        // 保存委托合同ID
+        apartment.setHouse_contract_id(houseContractVo.getContract_id());
+        // 房屋ID
+        apartment.setHouse_id(house.getHouse_id());
+        // 城市 城区
+        apartment.setCity_code(house.getCity_code());
+        apartment.setArea_code(house.getArea_code());
+        // 公寓编号
+        apartment.setApartment_code(apartment_code);
+        apartment.setApartment_type(houseContractVo.getApartment_type());
+        apartment.setRent_type(breaksUpHouseVo.getRent_type());
+        // 待出租
+        apartment.setRent_status(DictConstants.RentStatus.WAITING_RENT.value());
+        // 看房方式、日期、备注
+        apartment.setLook_type(houseRent.getLook_type());
+        apartment.setLook_date(houseRent.getLook_date());
+        apartment.setLook_remark(houseRent.getLook_remark());
+        if (DictConstants.RentType.ENTIRE.value().equals(breaksUpHouseVo.getRent_type())) {
+            // 租金成本为委托合同的房租(房租!=月租金)
+            if (null != houseContractVo && null != houseContractVo.getRental_price()) {
+                apartment.setEntrust_cost(houseContractVo.getRental_price());
+            }
+            // 整租装修和资金成本为0.0
+            apartment.setFitment_cost(0.0);
+            apartment.setCapital_cost(0.0);
+        }
+        // 装修情况
+        apartment.setFitment_type(house.getFitment_type());
+        // 房源方部门、房源方-委托合同签约部门、签约人
+        apartment.setDid(houseContractVo.getSign_did());
+        apartment.setUid(houseContractVo.getSign_uid());
+        // 启用状态--与委托合同保持一致［由委托合同的启用状态决定］
+        apartment.setIs_active(StringUtil.isNullOrEmpty(houseContractVo.getIs_active()) ? DictConstants.YesNo.N.value() : houseContractVo.getIs_active());
+        // 上加状态、上架人、上架时间
+        // 激活类型、激活日期、激活人
+        apartment.setActivated_type(houseContractVo.getContract_type());
+        apartment.setActivated_time(DateUtil.getCurrentDateTimeAsString());
+        apartment.setActivated_uid(sysUser.getUser_id());
+        // 着火状态-未着火
+        apartment.setFire_status(DictConstants.FireStatus.NOFIRE.value());
+        apartment.setDeleted(0);
+        // 服务管家-服务管家部门
+        apartment.setService_did(houseContractVo.getServer_manage_did());
+        apartment.setService_uid(houseContractVo.getServer_manage_uid());
+        // 入住日期
+        apartment.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+        apartment.setCreate_uid(sysUser.getUser_id());
+        apartment.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+        apartment.setUpdate_uid(sysUser.getUser_id());
+
+        // 空置日期 2016-07-29 委托起算日
+        if (DictConstants.ApartmentType.MANAGE.value().equals(breaksUpHouseVo.getApartment_type()) && DictConstants.RentType.SHARE.value().equals(breaksUpHouseVo.getRent_type())) {
+            // 托管合租
+            apartment.setVacancy_date(houseContractVo.getEntrust_start_date());
+        }
+
+        // 房源属性 默认空置 2016-08-02
+        apartment.setProperty(DictConstants.ApartmentProperty.VACANCY.value());
+
+        // 根据委托合同号和房源编号查询数据库,判断是否已经存在 0911
+        Integer count = apartmentMapper.selectApartmentByContractIdAndHouseCode(apartment.getHouse_contract_id(), apartment.getApartment_code());
+        if (null != count && count > 0) {
+            IszLogger.error("委托合同设计工程生成公寓时,公寓已经存在.");
+        } else {
+            apartmentMapper.insertApartment(apartment);
+            if (null == apartment.getApartment_id()) {
+                throw new RuntimeException("公寓创建失败.");
+            }
+            // 记录公寓状态日志
+            apartmentServiceBiz.saveApartmentStatus(sysUser, apartment);
+            // 生成公寓系统跟进
+            apartmentServiceBiz.saveFollow(apartment, "设计工程生成品牌公寓");
+
+            // 续签且当前委托合同的is_active为Y 激活house_room[2016-08-01]
+            if (DictConstants.HouseContractType.RENEWSIGN.value().equals(houseContractVo.getContract_type()) && DictConstants.YesNo.Y.value().equals(houseContractVo.getIs_active())) {
+                Map<String, Object> paramsMap = new HashMap<>();
+                paramsMap.put("contract_id", houseContractVo.getContract_id());
+                if (DictConstants.RentType.SHARE.value().equals(apartment.getRent_type())) {
+                    paramsMap.put("room_id", apartment.getRoom_id());
+                }
+                activateHouseRoom(sysUser, paramsMap);
+            }
+        }
+
+    }
+
+    /**
+     * 整租
+     *
+     * @param sysUser
+     * @param breaksUpHouseVo
+     * @param fitmentRoomList
+     * @throws Exception
+     */
+    @Transactional
+    private void saveEntireHouseRoom(SysUser sysUser, BreaksUpHouseVo breaksUpHouseVo, List<FitmentRoom> fitmentRoomList, FitmentHouse fitmentHouseOld) throws Exception {
+        // 循环保存house_room和house_room_configuration
+        // house_room_img;fitment_room
+        if (null != fitmentRoomList && fitmentRoomList.size() > 0) {
+            // 出租房屋信息
+            House house = houseMapper.selectByPrimaryKey(breaksUpHouseVo.getHouse_id());
+            if (null == house) {
+                throw new RuntimeException("出租房源不存在,或查询失败.");
+            }
+            HouseRent houseRent = houseRentMapper.selectByHouseId(breaksUpHouseVo.getHouse_id());
+            if (null == houseRent) {
+                throw new RuntimeException("出租房源出租信息不存在,或查询失败.");
+            }
+            // 委托合同信息
+            HouseContractVo houseContractVo = houseContractVoMapper.selectByContractId(breaksUpHouseVo.getContract_id());
+            if (null == houseContractVo) {
+                throw new RuntimeException("委托合同不存在,或查询失败.");
+            }
+            for (FitmentRoom fitmentRoom : fitmentRoomList) {
+                // 新增出租房间
+                HouseRoom houseRoom = fitmentRoom.getHouseRoom();
+                if (StringUtil.isNullOrEmpty(houseRoom.getPublic_flag())) {
+                    throw new RuntimeException("缺少出租房间是否为公共区域或卧室.");
+                }
+                // 生成房间编号
+                SysDistrict city = districtService.getByCode(house.getCity_code());
+                if (null == city || StringUtil.isNullOrEmpty(city.getAbridge())) {
+                    throw new RuntimeException((null != city ? (city.getName() + "缺少汉语拼音.") : "市区不存在"));
+                }
+                SysDistrict area = districtService.getByCode(house.getArea_code());
+                if (null == area || StringUtil.isNullOrEmpty(area.getAbridge())) {
+                    throw new RuntimeException((null != area ? (area.getName() + "缺少汉语拼音.") : "城区不存在"));
+                }
+                String room_code = redisService.getCode(CodeTypeConstants.HOUSE_ROOM_CODE);
+                if (StringUtil.isNullOrEmpty(room_code)) {
+                    throw new RuntimeException("redisService生成房间编号失败.");
+                }
+                // 房间编号
+                room_code = BusinessCodeUtil.generateCode(CodeTypeConstants.HOUSE_ROOM_CODE + city.getAbridge(), area.getAbridge(), room_code);
+                // 1.新增装修房间
+                // 主键
+                fitmentRoom.setFitment_room_id(UuidUtil.getUUID());
+                fitmentRoom.setFitment_id(breaksUpHouseVo.getFitmentHouse().getFitment_id());
+                fitmentRoom.setRoom_id(houseRoom.getRoom_id());
+                fitmentRoom.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                fitmentRoom.setCreate_uid(sysUser.getUser_id());
+                fitmentRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                fitmentRoom.setUpdate_uid(sysUser.getUser_id());
+                fitmentRoom.setRoom_code(room_code);
+                fitmentRoom.setRoom_no(houseRoom.getRoom_no());
+                fitmentRoom.setPublic_flag(houseRoom.getPublic_flag());
+                fitmentRoom.setRoom_area(houseRoom.getRoom_area());
+                fitmentRoom.setRoom_orientation(houseRoom.getRoom_orientation());
+                fitmentRoomMapper.insert(fitmentRoom);
+                // 2.新增出租房间[如果已经存在出租房间则不作处理,定时任务去更新和处理house_room<-fitment_house_room]
+                // 整租 通过house_id和public_flag去判断
+                // 合租 通过house_id和room_no及deleted和is_active去判断
+                Map<String, Object> paramsMap = new HashMap<String, Object>();
+                paramsMap.put("house_id", house.getHouse_id());
+                paramsMap.put("public_flag", houseRoom.getPublic_flag());
+                HouseRoom houseRoomOld = houseRoomMapper.selectByEntireHouseIdAndPublicFlag(paramsMap);
+
+                if (null == houseRoomOld) {
+                    houseRoom.setHouse_id(house.getHouse_id());
+                    houseRoom.setHouse_contract_id(houseContractVo.getContract_id());
+                    houseRoom.setResidential_id(house.getResidential_id());
+                    houseRoom.setBuilding_id(house.getBuilding_id());
+                    houseRoom.setCity_code(house.getCity_code());
+                    houseRoom.setArea_code(house.getArea_code());
+                    houseRoom.setRoom_code(room_code);
+                    // 主键
+                    houseRoom.setRoom_id(UuidUtil.getUUID());
+                    houseRoom.setIs_active(DictConstants.YesNo.Y.value());
+                    houseRoom.setDeleted(0);
+                    houseRoom.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                    houseRoom.setCreate_uid(sysUser.getUser_id());
+                    houseRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                    houseRoom.setUpdate_uid(sysUser.getUser_id());
+                    houseRoom.setFitment_room_id(fitmentRoom.getFitment_room_id());
+                    houseRoomMapper.insertHouseRoom(houseRoom);
+                    if (null == houseRoom.getRoom_id()) {
+                        throw new RuntimeException("新增出租房间失败.");
+                    }
+                } else {
+                    HouseRoom updatedHouseRoom = new HouseRoom();
+                    updatedHouseRoom.setRoom_id(houseRoomOld.getRoom_id());
+                    updatedHouseRoom.setResidential_id(houseRoomOld.getResidential_id());
+                    updatedHouseRoom.setBuilding_id(houseRoomOld.getBuilding_id());
+                    updatedHouseRoom.setHouse_id(houseRoomOld.getHouse_id());
+                    // 新增用旧的 编辑用新的【通过定时任务更新旧的】
+                    if (null != fitmentHouseOld && fitmentHouseOld.getContract_id().equals(houseContractVo.getContract_id()) && houseRoomOld.getHouse_contract_id().equals(fitmentHouseOld.getContract_id())) {
+                        updatedHouseRoom.setFitment_room_id(fitmentRoom.getFitment_room_id());
+                    } else {
+                        updatedHouseRoom.setFitment_room_id(houseRoomOld.getFitment_room_id());
+                    }
+                    updatedHouseRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                    updatedHouseRoom.setUpdate_uid(sysUser.getUser_id());
+                    houseRoomMapper.updateByPrimaryKeySelective(updatedHouseRoom);
+
+                    // 更新卧室房间或公共区域的室内图的fitment_room_id
+                    Map<String, Object> updatedHouseRoomImgMap = new HashMap<String, Object>();
+                    updatedHouseRoomImgMap.put("room_id", houseRoomOld.getRoom_id());
+                    if (null != fitmentHouseOld && fitmentHouseOld.getContract_id().equals(houseContractVo.getContract_id()) && houseRoomOld.getHouse_contract_id().equals(fitmentHouseOld.getContract_id())) {
+                        updatedHouseRoomImgMap.put("fitment_room_id", fitmentRoom.getFitment_room_id());
+                    } else {
+                        updatedHouseRoomImgMap.put("fitment_room_id", houseRoomOld.getFitment_room_id());
+                    }
+                    houseRoomImgMapper.updateIndoorImgsFitmentRoomId(updatedHouseRoomImgMap);
+
+                    houseRoom.setRoom_id(houseRoomOld.getRoom_id());
+                    houseRoom.setResidential_id(houseRoomOld.getResidential_id());
+                    houseRoom.setBuilding_id(houseRoomOld.getBuilding_id());
+                    houseRoom.setHouse_id(houseRoomOld.getHouse_id());
+
+                    houseRoom.setFitment_room_id(fitmentRoom.getFitment_room_id());
+
+                    houseRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                    houseRoom.setUpdate_uid(sysUser.getUser_id());
+                }
+
+                // 新增出租房间配置
+                List<HouseRoomConfiguration> houseRoomConfigurationList = houseRoom.getHouseRoomConfigurationList();
+                if (null != houseRoomConfigurationList && houseRoomConfigurationList.size() > 0) {
+                    for (HouseRoomConfiguration houseRoomConfiguration : houseRoomConfigurationList) {
+                        if (StringUtil.isNullOrEmpty(houseRoomConfiguration.getOwner_type())) {
+                            throw new RuntimeException("房间配置缺少所属主题(房东或公司).");
+                        }
+                        // 主键
+                        houseRoomConfiguration.setConfiguration_id(UuidUtil.getUUID());
+                        houseRoomConfiguration.setRoom_id(houseRoom.getRoom_id());
+                        houseRoomConfiguration.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                        houseRoomConfiguration.setCreate_uid(sysUser.getUser_id());
+                        houseRoomConfiguration.setFitment_room_id(houseRoom.getFitment_room_id());
+                    }
+                    houseRoomConfigurationMapper.saveHouseRoomConfiguration(houseRoomConfigurationList);
+                }
+                if (DictConstants.YesNo.Y.value().equals(houseRoom.getPublic_flag())) {
+                    // 新增出租房间图片(保存在公共区域的house_room关联图片中)
+                    List<HouseRoomImg> houseRoomImgList = houseRoom.getHouseRoomImgList();
+                    List<HouseRoomImg> savedRoomImgList = new ArrayList<HouseRoomImg>();
+                    if (null != houseRoomImgList && houseRoomImgList.size() > 0) {
+                        for (HouseRoomImg houseRoomImg : houseRoomImgList) {
+                            if (null == houseRoomImg.getImg_id()) {
+                                throw new RuntimeException("装修房屋户型图缺少图片ID.");
+                            }
+                            // 室内图不处理
+                            if (DictConstants.ImgType.INDOOR_IMGS.value().equals(houseRoomImg.getImg_type())) {
+                                continue;
+                            }
+                            // 主键
+                            houseRoomImg.setRoom_img_id(UuidUtil.getUUID());
+                            houseRoomImg.setResidential_id(houseRoom.getResidential_id());
+                            houseRoomImg.setBuilding_id(houseRoom.getBuilding_id());
+                            houseRoomImg.setHouse_id(houseRoom.getHouse_id());
+                            houseRoomImg.setRoom_id(houseRoom.getRoom_id());
+                            houseRoomImg.setDeleted(0);
+                            houseRoomImg.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                            houseRoomImg.setCreate_uid(sysUser.getUser_id());
+                            houseRoomImg.setFitment_room_id(houseRoom.getFitment_room_id());
+                            savedRoomImgList.add(houseRoomImg);
+                        }
+                        if (null != savedRoomImgList && savedRoomImgList.size() > 0) {
+                            houseRoomImgMapper.saveHouseRoomImg(savedRoomImgList);
+                        }
+                    }
+                }
+
+            }
+
+            // 判断apartment是否已经存在[主要是这里修改为通过委托合同ID查询当前委托合同生成的品牌公寓是否存在]
+            // 整租 无需处理house_room的room_id
+            // 合租 根据house_room是否存在来判断apartment的room_id是新增还是更新[2016-07-19]
+            Map<String, Object> apartmentParamsMap = new HashMap<String, Object>();
+            apartmentParamsMap.put("house_id", house.getHouse_id());
+            apartmentParamsMap.put("contract_id", houseContractVo.getContract_id());
+            Apartment apartmentOld = apartmentMapper.selectByHouseIdContractId(apartmentParamsMap);
+            if (null == apartmentOld || null == apartmentOld.getApartment_id() || apartmentOld.getDeleted() == 1) {
+                generateApartment(sysUser, breaksUpHouseVo, house, houseRent, houseContractVo, null, house.getHouse_code());
+            } else {
+                // 生成Apartment,整租room不进入Apartment关联
+                Apartment apartment = new Apartment();
+                // 收房成本(租金成本)为委托合同的月租金(整租)
+                if (null != houseContractVo && null != houseContractVo.getRental_price()) {
+                    apartment.setEntrust_cost(houseContractVo.getRental_price());
+                }
+                // 房源方部门、房源方-委托合同签约部门、签约人
+                apartment.setDid(houseContractVo.getSign_did());
+                apartment.setUid(houseContractVo.getSign_uid());
+                // 激活类型、激活日期、激活人
+                if (!houseContractVo.getContract_type().equals(apartment.getActivated_type())) {
+                    apartment.setActivated_type(houseContractVo.getContract_type());
+                    apartment.setActivated_time(DateUtil.getCurrentDateTimeAsString());
+                    apartment.setActivated_uid(sysUser.getUser_id());
+                }
+
+                apartment.setFitment_type(house.getFitment_type());
+
+                apartment.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                apartment.setUpdate_uid(sysUser.getUser_id());
+                apartment.setApartment_id(apartmentOld.getApartment_id());
+                apartmentMapper.updateByPrimaryKeySelective(apartment);
+            }
+        }
+    }
+
+    /**
+     * 设计装修详情(改造、分割户型)
+     *
+     * @param sessionVo
+     * @param pageData
+     * @return ResultObjectMsg<BreaksUpHouseVo>
+     * @throws Exception
+     */
+    public ResultObjectMsg<BreaksUpHouseVo> selectDesignDetail(SessionVo sessionVo, Map<String, Object> pageData) throws Exception {
+        if (null == pageData || null == pageData.get("contract_id")) {
+            return new ResultObjectMsg<BreaksUpHouseVo>("缺少委托合同ID.");
+        }
+        BreaksUpHouseVo breaksUpHouseVo = new BreaksUpHouseVo();
+        FitmentHouse fitmentHouse = fitmentHouseMapper.selectByContractId(String.valueOf(pageData.get("contract_id")));
+        if (null != fitmentHouse) {
+            // 以设计后的新户型为准
+            House house = houseMapper.selectByPrimaryKey(fitmentHouse.getHouse_id());
+            if (null != house) {
+                fitmentHouse.setBuild_area(house.getBuild_area());
+            }
+            List<FitmentRoom> fitmentRoomList = fitmentRoomMapper.selectListByFitmentId(fitmentHouse.getFitment_id());
+            if (null != fitmentRoomList && fitmentRoomList.size() > 0) {
+                for (FitmentRoom fitmentRoom : fitmentRoomList) {
+                    // fitment_id[house_id] public_flag room_no
+                    Map<String, Object> paramsMap = new HashMap<String, Object>();
+                    paramsMap.put("fitment_id", fitmentRoom.getFitment_id());
+                    paramsMap.put("public_flag", fitmentRoom.getPublic_flag());
+                    paramsMap.put("room_no", fitmentRoom.getRoom_no());
+                    HouseRoom houseRoom = houseRoomMapper.selectByMap(paramsMap);
+                    if (null == houseRoom) {
+                        houseRoom = new HouseRoom();
+                    }
+                    houseRoom.setRoom_code(fitmentRoom.getRoom_code());
+                    houseRoom.setRoom_no(fitmentRoom.getRoom_no());
+                    houseRoom.setPublic_flag(fitmentRoom.getPublic_flag());
+                    houseRoom.setRoom_type(fitmentRoom.getRoom_type());
+                    houseRoom.setRoom_area(fitmentRoom.getRoom_area());
+                    houseRoom.setRoom_orientation(fitmentRoom.getRoom_orientation());
+                    houseRoom.setIs_active(fitmentRoom.getIs_active());
+//                        // 房间附间
+//                        houseRoom.setHouseRoomFuncList(houseRoomFuncMapper.selectByRoomId(houseRoom.getRoom_id()));
+//                        // 房间配置
+//                        houseRoom.setHouseRoomConfigurationList(houseRoomConfigurationMapper.selectByRoomId(houseRoom.getRoom_id()));
+//                        // 房屋户型图(保存在公共区域房间里面)
+//                        houseRoom.setHouseRoomImgList(houseRoomImgMapper.selectByRoomId(houseRoom.getRoom_id()));
+                    // 从fitment_room中查询赋给house_room[2016-07-19]
+                    houseRoom.setHouseRoomFuncList(houseRoomFuncMapper.selectByFitmentRoomId(fitmentRoom.getFitment_room_id()));
+                    houseRoom.setHouseRoomConfigurationList(houseRoomConfigurationMapper.selectByFitmentRoomId(fitmentRoom.getFitment_room_id()));
+                    houseRoom.setHouseRoomImgList(houseRoomImgMapper.selectByFitmentRoomId(fitmentRoom.getFitment_room_id()));
+                    fitmentRoom.setHouseRoom(houseRoom);
+                }
+            }
+            breaksUpHouseVo.setFitmentRoomList(fitmentRoomList);
+            breaksUpHouseVo.setHouse_id(fitmentHouse.getFitment_id());
+        }
+        breaksUpHouseVo.setFitmentHouse(fitmentHouse);
+        breaksUpHouseVo.setContract_id((String) pageData.get("contract_id"));
+        HouseContractVo houseContractVo = houseContractVoMapper.selectByContractId((String) pageData.get("contract_id"));
+        if (null != houseContractVo) {
+            breaksUpHouseVo.setApartment_type(houseContractVo.getApartment_type());
+            breaksUpHouseVo.setRent_type(houseContractVo.getEntrust_type());
+        }
+
+        // 功能数据权限--委托合同签约人签约部门
+        ResultObjectMsg<BreaksUpHouseVo> resultObjectMsg = new ResultObjectMsg<BreaksUpHouseVo>(breaksUpHouseVo);
+        if (null != sessionVo) {
+            resultObjectMsg.setPar("DataDesignManageWorkblank", sessionVo.isEnabled("DesignManageWorkblank", String.valueOf(houseContractVo.getSign_did()), String.valueOf(houseContractVo.getSign_uid())) ? "" : "disabled");
+        }
+        return resultObjectMsg;
+    }
+
+    /**
+     * 设计装修详情
+     *
+     * @param pageData
+     * @return
+     * @throws Exception
+     */
+    public ResultObjectMsg<FitmentHouse> selectFitmentHouseDetail(Map<String, Object> pageData) throws Exception {
+        if (null == pageData || null == pageData.get("fitment_id")) {
+            return new ResultObjectMsg<FitmentHouse>("缺少设计装修ID.");
+        }
+        return new ResultObjectMsg<FitmentHouse>(fitmentHouseMapper.selectByPrimaryKey(pageData.get("fitment_id")));
+    }
+
+    /**
+     * 派单
+     *
+     * @param sysUser
+     * @param fitmentHouse
+     * @return ResultMsg
+     */
+    @Transactional
+    public ResultMsg sendOrder(SysUser sysUser, FitmentHouse fitmentHouse) throws Exception {
+        if (null == sysUser || null == fitmentHouse) {
+            return ResultMsg.createErrorMsg("请求参数为空.");
+        }
+        if (null == fitmentHouse.getFitment_id()) {
+            return ResultMsg.createErrorMsg("缺少设计装修ID.");
+        }
+        if (null == fitmentHouse.getFitment_uid()) {
+            return ResultMsg.createErrorMsg("请选择装修专员.");
+        }
+        FitmentHouse fitmentHouseOld = fitmentHouseMapper.selectByPrimaryKey(fitmentHouse.getFitment_id());
+        if (!fitmentHouseOld.getUpdate_time().equals(fitmentHouse.getUpdate_time())) {
+            return ResultMsg.createErrorMsg("数据已经被修改，请重新派单.");
+        }
+        fitmentHouseMapper.updateByPrimaryKeySelective(fitmentHouse);
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 交房[品牌整租 合租 和 托管合租【无交房】]
+     *
+     * @param sysUser
+     * @param fitmentHouse
+     * @return ResultMsg
+     */
+    @Transactional
+    public ResultMsg closingRoom(SysUser sysUser, FitmentHouse fitmentHouse) throws Exception {
+        try {
+            if (null == sysUser || null == fitmentHouse) {
+                return ResultMsg.createErrorMsg("请求参数为空.");
+            }
+            if (null == fitmentHouse.getFitment_id()) {
+                return ResultMsg.createErrorMsg("缺少设计装修ID.");
+            }
+            FitmentHouse fitmentHouseOld = fitmentHouseMapper.selectByPrimaryKey(fitmentHouse.getFitment_id());
+            if (!fitmentHouseOld.getUpdate_time().equals(fitmentHouse.getUpdate_time())) {
+                return ResultMsg.createErrorMsg("数据已经被修改，请重新交房.");
+            }
+            // 整套交付日不为空，装修状态变为已交房
+            if (!StringUtil.isNullOrEmpty(fitmentHouse.getSet_delivery_date())) {
+                fitmentHouse.setFitment_status(DictConstants.FitmentStatus.HANDOVER.value());
+            }
+            fitmentHouse.setUpdate_uid(sysUser.getUser_id());
+            fitmentHouse.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            fitmentHouseMapper.updateByPrimaryKeySelective(fitmentHouse);
+
+            List<Apartment> apartmentList = apartmentMapper.selectByHouseContractId(fitmentHouseOld.getContract_id());
+            if (null != apartmentList && apartmentList.size() > 0) {
+                for (Apartment apartmentOld : apartmentList) {
+                    Apartment apartment = new Apartment();
+                    HouseContractVo houseContractVo = houseContractVoMapper.selectByContractId(fitmentHouseOld.getContract_id());
+
+                    if (!StringUtil.isNullOrEmpty(fitmentHouse.getSet_delivery_date())) {
+                        // 交房时间 空置日期 2016-07-29
+                        if (!StringUtil.isNullOrEmpty(fitmentHouse.getSet_delivery_date())) {
+                            // 交房时间比委托起算日晚 则更新空置日期为交房时间
+                            Date d1 = DateUtil.parse(houseContractVo.getEntrust_start_date());
+                            Date d2 = DateUtil.parse(fitmentHouse.getSet_delivery_date());
+                            if (d2.getTime() > d1.getTime()) {
+                                apartment.setVacancy_date(fitmentHouse.getSet_delivery_date());
+                            } else {
+                                apartment.setVacancy_date(houseContractVo.getEntrust_start_date());
+                            }
+                        } else {
+                            apartment.setVacancy_date(houseContractVo.getEntrust_start_date());
+                        }
+                    }
+
+                    apartment.setApartment_id(apartmentOld.getApartment_id());
+                    apartment.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                    apartment.setUpdate_uid(sysUser.getUser_id());
+
+                    // 根据装修总成本和成本占比计算装修成本和资金成本
+                    if (null == fitmentHouse.getTotal_cost()) {
+                        fitmentHouse.setTotal_cost(0.0);
+                    }
+                    if (null != fitmentHouse.getTotal_cost() && fitmentHouse.getTotal_cost() >= 0) {
+                        Double cost_account = apartmentOld.getCost_account();
+
+                        BigDecimal fitment_cost = new BigDecimal(0);
+                        BigDecimal entrust_cost = new BigDecimal(0);
+                        BigDecimal capital_cost = new BigDecimal(0);
+
+                        if (DictConstants.EntrustType.ENTIRE.value().equals(apartmentOld.getRent_type())) {
+                            if (null == cost_account) {
+                                cost_account = 1.0;
+                            }
+                            if (null != houseContractVo) {
+                                // 装修总成本/委托年限  委托起算日 委托到期日
+                                // 委托年限
+                                Double entrustMonth = DateUtil.diffMonth(DateUtil.parse(houseContractVo.getEntrust_start_date()), DateUtil.parse(houseContractVo.getEntrust_end_date()));
+
+                                if (entrustMonth >= 60) {
+                                    entrustMonth = 60.0;
+                                }
+                                fitment_cost = new BigDecimal(fitmentHouse.getTotal_cost()).divide(new BigDecimal(entrustMonth), 5, BigDecimal.ROUND_HALF_UP).setScale(5, BigDecimal.ROUND_HALF_UP);
+                                apartment.setFitment_cost((new BigDecimal(fitmentHouse.getTotal_cost()).divide(new BigDecimal(entrustMonth), 5, BigDecimal.ROUND_HALF_UP).setScale(2, BigDecimal.ROUND_HALF_UP)).doubleValue());
+                            }
+                        }
+                        if (DictConstants.EntrustType.SHARE.value().equals(apartmentOld.getRent_type())) {
+                            if (null == cost_account) {
+                                cost_account = 0.0;
+                            }
+                            // 成本占比
+                            cost_account = cost_account * 0.01;
+
+                            BigDecimal bigCostAccount = new BigDecimal(cost_account);
+
+                            // 装修总成本/委托年限*成本占比 委托起算日 委托到期日
+                            if (null != houseContractVo) {
+                                // 装修总成本/委托年限  委托起算日 委托到期日
+                                // 委托年限
+                                Double entrustMonth = DateUtil.diffMonth(DateUtil.parse(houseContractVo.getEntrust_start_date()), DateUtil.parse(houseContractVo.getEntrust_end_date()));
+
+                                if (entrustMonth >= 60.0) {
+                                    entrustMonth = 60.0;
+                                }
+                                fitment_cost = new BigDecimal(fitmentHouse.getTotal_cost()).divide(new BigDecimal(entrustMonth), 5, BigDecimal.ROUND_HALF_UP).multiply(bigCostAccount).setScale(5, BigDecimal.ROUND_HALF_UP);
+                                apartment.setFitment_cost((new BigDecimal(fitmentHouse.getTotal_cost()).divide(new BigDecimal(entrustMonth), 5, BigDecimal.ROUND_HALF_UP).multiply(bigCostAccount).setScale(2, BigDecimal.ROUND_HALF_UP)).doubleValue());
+
+                            }
+                            // 租金成本【收件价】*所成交房源的成本占比
+                            entrust_cost = new BigDecimal(houseContractVo.getRental_price()).multiply(bigCostAccount).setScale(5, BigDecimal.ROUND_HALF_UP);
+                            apartment.setEntrust_cost((new BigDecimal(houseContractVo.getRental_price()).multiply(bigCostAccount).setScale(2, BigDecimal.ROUND_HALF_UP)).doubleValue());
+                        }
+                        // 资金成本 装修总成本的8.5%（系数12）/12个月 [取动态系数]
+                        Double factorValue = achievementConfigRedisService.getAchievementConfig(apartmentOld.getCity_code(), ConfigParentTypeEnum.OTHER.getValue(), ConfigTypeEnum.FUNDS_PROPORTION.getValue(), ConfigFactorEnum.OTHER_ACCOUNTING_DATE_FIRST.getValue());
+//                        Double factorValue = 8.5;
+                        if (null == factorValue) {
+                            return ResultMsg.createOkMsg("其他-资金分成比例 系数为空.");
+                        }
+
+                        BigDecimal bigCostAccount = new BigDecimal(cost_account);
+                        BigDecimal bigFactorValue = new BigDecimal(factorValue);
+
+                        capital_cost = new BigDecimal(fitmentHouse.getTotal_cost()).multiply(bigCostAccount).multiply(bigFactorValue).multiply(new BigDecimal(0.01)).divide(new BigDecimal(12), 5, BigDecimal.ROUND_HALF_UP).setScale(5, BigDecimal.ROUND_HALF_UP);
+                        apartment.setCapital_cost((new BigDecimal(fitmentHouse.getTotal_cost()).multiply(bigCostAccount).multiply(bigFactorValue).multiply(new BigDecimal(0.01)).divide(new BigDecimal(12), 5, BigDecimal.ROUND_HALF_UP).setScale(2, BigDecimal.ROUND_HALF_UP)).doubleValue());
+
+                        if (null != apartment.getFitment_cost() && null != apartment.getCapital_cost() && null != apartment.getEntrust_cost()) {
+                            apartment.setApartment_cost(fitment_cost.add(capital_cost).add(entrust_cost).setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue());
+                        }
+
+                        StringBuffer sb = new StringBuffer("");
+                        if (apartmentOld.getFitment_cost() != apartment.getFitment_cost()) {
+                            sb.append("【装修成本" + (null == apartmentOld.getFitment_cost() ? 0 : apartmentOld.getFitment_cost()) + "=>" + apartment.getFitment_cost() + "】");
+                        }
+                        if (apartmentOld.getCapital_cost() != apartment.getCapital_cost()) {
+                            sb.append("【资金成本" + (null == apartmentOld.getCapital_cost() ? 0 : apartmentOld.getCapital_cost()) + "=>" + apartment.getCapital_cost() + "】");
+                        }
+                        if (apartmentOld.getEntrust_cost() != apartment.getEntrust_cost()) {
+                            sb.append("【租金成本" + (null == apartmentOld.getEntrust_cost() ? 0 : apartmentOld.getEntrust_cost()) + "=>" + apartment.getEntrust_cost() + "】");
+                        }
+                        apartmentServiceBiz.saveFollow(apartmentOld, sb.toString());
+                    }
+                    if (!StringUtil.isNullOrEmpty(fitmentHouse.getSet_delivery_date()) || (null != fitmentHouse.getTotal_cost() && fitmentHouse.getTotal_cost() >= 0)) {
+                        apartmentMapper.updateByPrimaryKeySelective(apartment);
+                    }
+                }
+            }
+            return ResultMsg.createOkMsg();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 房源装修历史记录
+     *
+     * @param pageData
+     * @return ResultObjectMsg<PagingHelper<FitmentHouse>>
+     */
+    public ResultObjectMsg<PagingHelper<FitmentHouse>> selectFitmentHistoryList(Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        PagingHelper<FitmentHouse> ph = new PagingHelper<FitmentHouse>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<FitmentHouse> list = fitmentHouseMapper.selectFitmentHistoryList(pageData);
+        Integer count = fitmentHouseMapper.countSelectFitmentHistory(pageData);
+
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<FitmentHouse>>(ph);
+    }
+
+    /**
+     * 判断当前房间是否有有效的出租合同
+     *
+     * @param pageData
+     * @return ResultMsg
+     */
+    public ResultMsg haveApartmentContract(Map<String, Object> pageData) throws Exception {
+        // 出租合同ID
+        String contract_id = houseRoomMapper.selectSignedByHouseAndRoom(pageData);
+        if (null != contract_id) {
+            return ResultMsg.createErrorMsg("当前房间有有效的出租合同，不能删除.");
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 删除合租房间
+     *
+     * @param pageData
+     * @return ResultMsg
+     */
+    @Transactional
+    public ResultMsg deleteShareRoom(SysUser sysUser, Map<String, Object> pageData) throws Exception {
+        try {
+            String contract_id = houseRoomMapper.selectSignedByHouseAndRoom(pageData);
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return ResultMsg.createErrorMsg("缺少用户ID，请登录.");
+            }
+            if (null != contract_id) {
+                return ResultMsg.createErrorMsg("当前房间有有效的出租合同，不能删除.");
+            }
+
+            pageData.put("update_time", DateUtil.getCurrentDateTimeAsString());
+            pageData.put("update_uid", sysUser.getUser_id());
+            // 删除当前房间的相关配置、功能区
+            // 删除当前房间
+            // 删除当前房间的合租公寓
+            houseRoomConfigurationMapper.deleteByHouseIdAndRoomId(pageData);
+            houseRoomFuncMapper.deleteByHouseIdAndRoomId(pageData);
+            houseRoomFeatureMapper.deleteByHouseIdAndRoomId(pageData);
+            houseRoomMapper.deleteByHouseIdAndRoomId(pageData);
+            apartmentMapper.deleteByHouseIdAndRoomId(pageData);
+            return ResultMsg.createOkMsg();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 新增或续签品牌委托合同时调用此接口 以根据条件激活新签的上一份或续签的父合同的品牌设计方案
+     *
+     * @param sysUser
+     * @param houseContractMap
+     * @return ResultMsg
+     */
+    @Transactional
+    public ResultMsg activateFitmentHouse(SysUser sysUser, Map<String, Object> houseContractMap) throws Exception {
+        try {
+            if (null == sysUser || null == sysUser.getUser_id()) {
+                return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            String contract_id = (String) houseContractMap.get("contract_id");
+            if (null == houseContractMap || StringUtil.isNullOrEmpty(contract_id)) {
+                return ResultMsg.createErrorMsg("缺少委托合同ID.");
+            }
+            String house_id = (String) houseContractMap.get("house_id");
+            if (StringUtil.isNullOrEmpty(house_id)) {
+                return ResultMsg.createErrorMsg("缺少出租房源ID.");
+            }
+            String contract_type = (String) houseContractMap.get("contract_type");
+            if (StringUtil.isNullOrEmpty(contract_type)) {
+                return ResultMsg.createErrorMsg("缺少合同类型[新签续签].");
+            }
+
+            String parent_id = (String) houseContractMap.get("parent_id");
+
+            String apartment_type = (String) houseContractMap.get("apartment_type");
+            if (StringUtil.isNullOrEmpty(apartment_type)) {
+                return ResultMsg.createErrorMsg("缺少公寓类型[托管品牌].");
+            }
+
+            String entrust_type = (String) houseContractMap.get("entrust_type");
+            if (StringUtil.isNullOrEmpty(entrust_type)) {
+                return ResultMsg.createErrorMsg("缺少出租类型[整租合租].");
+            }
+
+            // 新签-上一份委托合同 续签-父委托合同
+            HouseContractVo houseContractVoPre = null;
+
+            // 新签[只有续签]
+//            if (DictConstants.HouseContractType.NEWSIGN.value().equals(contract_type)) {
+//                Map<String, Object> paramsMap = new HashMap<String, Object>();
+//                paramsMap.put("house_id", house_id);
+//                paramsMap.put("contract_id", contract_id);
+//                houseContractVoPre = houseContractVoMapper.selectPreByHouseIdAndContractId(paramsMap);
+//            }
+            // 续签
+            if (DictConstants.HouseContractType.RENEWSIGN.value().equals(contract_type)) {
+                if (!StringUtil.isNullOrEmpty(parent_id)) {
+                    houseContractVoPre = houseContractVoMapper.selectByContractId(parent_id);
+                }
+            }
+
+            if (null != houseContractVoPre && null != houseContractVoPre.getContract_id()) {
+                // 合同类型与公寓类型一致[品牌]
+                if (DictConstants.ApartmentType.BRAND.value().equals(apartment_type) && DictConstants.ApartmentType.BRAND.value().equals(houseContractVoPre.getApartment_type())) {
+                    if (null != houseContractVoPre.getApartment_type() && houseContractVoPre.getApartment_type().equals(apartment_type) && null != houseContractVoPre.getEntrust_type() && houseContractVoPre.getEntrust_type().equals(entrust_type)) {
+                        // 判断上一份[或父委托合同]委托合同的详情中房屋设计是否存在
+                        Map<String, Object> pageData = new HashMap<String, Object>();
+                        pageData.put("contract_id", houseContractVoPre.getContract_id());
+                        ResultObjectMsg<BreaksUpHouseVo> breaksUpHouseVoResultObjectMsg = selectDesignDetail(null, pageData);
+                        if (null != breaksUpHouseVoResultObjectMsg) {
+                            BreaksUpHouseVo breaksUpHouseVo = breaksUpHouseVoResultObjectMsg.getObj();
+                            // 之前的设计存在,激活新签的委托合同
+                            if (null != breaksUpHouseVo && null != breaksUpHouseVo.getFitmentHouse() && null != breaksUpHouseVo.getFitmentHouse().getFitment_id()) {
+                                // 修改合同ID为新的合同ID
+                                breaksUpHouseVo.setHouse_id(house_id);
+                                breaksUpHouseVo.setContract_id(contract_id);
+
+                                FitmentHouse fitmentHouse = breaksUpHouseVo.getFitmentHouse();
+                                // ID置为NULL
+                                if (null != fitmentHouse) {
+                                    fitmentHouse.setFitment_id(null);
+                                    fitmentHouse.setContract_id(contract_id);
+                                    fitmentHouse.setHouse_id(house_id);
+                                    if (houseContractMap.containsKey("reform_way")) {
+                                        fitmentHouse.setReform_way((String) houseContractMap.get("reform_way"));
+                                    }
+
+                                }
+                                // ID置为NULL
+                                if (null != breaksUpHouseVo.getFitmentRoomList() && breaksUpHouseVo.getFitmentRoomList().size() > 0) {
+                                    for (FitmentRoom fitmentRoom : breaksUpHouseVo.getFitmentRoomList()) {
+                                        if (null != fitmentRoom) {
+                                            fitmentRoom.setFitment_room_id(null);
+                                            fitmentRoom.setFitment_id(null);
+                                            fitmentRoom.setRoom_id(null);
+                                        }
+                                    }
+                                }
+                                SessionVo sessionVo = new SessionVo();
+                                sessionVo.setSysUser(sysUser);
+                                saveBreaksUpHouse(sessionVo, breaksUpHouseVo);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 委托合同激活时,激活当前委托合同的设计工程资料
+     *
+     * @param sysUser
+     * @param paramsMap
+     * @return ResultMsg
+     */
+    @Transactional
+    public ResultMsg activateHouseRoom(SysUser sysUser, Map<String, Object> paramsMap) throws Exception {
+        try {
+            if (null == sysUser || StringUtil.isNullOrEmpty(sysUser.getUser_id())) {
+                return ResultMsg.createErrorMsg("缺少用户ID,请登录.");
+            }
+            if (null == paramsMap) {
+                return ResultMsg.createErrorMsg("缺少请求参数.");
+            }
+            if (StringUtil.isNullOrEmpty((String) paramsMap.get("contract_id"))) {
+                return ResultMsg.createErrorMsg("缺少委托合同ID.");
+            }
+            // room_id为null或""就是整租 否则为合租
+            FitmentHouse fitmentHouse = fitmentHouseMapper.selectByContractId((String) paramsMap.get("contract_id"));
+            if (null == fitmentHouse) {
+                return ResultMsg.createErrorMsg("当前委托合同没有走设计工程或续签时没有自动激活.");
+            }
+            // 整租查询public_flag为N的house_room、合租直接传入apartment的room_id
+            // house_id public_flag;room_id
+            if (StringUtil.isNullOrEmpty((String) paramsMap.get("room_id"))) {
+                // 整租
+                Map<String, Object> entireMap = new HashMap<String, Object>();
+                entireMap.put("public_flag", DictConstants.YesNo.N.value());
+                entireMap.put("house_id", fitmentHouse.getHouse_id());
+                entireMap.put("fitment_id", fitmentHouse.getFitment_id());
+                FitmentRoom fitmentRoom = fitmentRoomMapper.selectFitmentRoomByMap(entireMap);
+                if (null == fitmentRoom) {
+                    return ResultMsg.createErrorMsg("整租卧室房间没有设计.");
+                }
+                // 卧室
+                HouseRoom houseRoom = houseRoomMapper.selectByEntireHouseIdAndPublicFlag(entireMap);
+                if (null == houseRoom) {
+                    return ResultMsg.createErrorMsg("整租卧室不存在.");
+                }
+                // 卧室的委托合同ID发生变化
+                houseRoom.setHouse_contract_id((String) paramsMap.get("contract_id"));
+                houseRoom.setFitment_room_id(fitmentRoom.getFitment_room_id());
+                houseRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                houseRoom.setUpdate_uid(sysUser.getUser_id());
+
+                houseRoomMapper.updateByPrimaryKeySelective(houseRoom);
+                // 公共区域
+                entireMap.put("public_flag", DictConstants.YesNo.Y.value());
+                FitmentRoom fitmentRoom2 = fitmentRoomMapper.selectFitmentRoomByMap(entireMap);
+                if (null == fitmentRoom2) {
+                    return ResultMsg.createErrorMsg("整租公共区域房间没有设计.");
+                }
+                HouseRoom houseRoom2 = houseRoomMapper.selectByEntireHouseIdAndPublicFlag(entireMap);
+                if (null == houseRoom2) {
+                    return ResultMsg.createErrorMsg("整租公共区域不存在.");
+                }
+                // 公共区域的委托合同ID发生变化
+                houseRoom2.setHouse_contract_id((String) paramsMap.get("contract_id"));
+                houseRoom2.setFitment_room_id(fitmentRoom2.getFitment_room_id());
+                houseRoom2.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                houseRoom2.setUpdate_uid(sysUser.getUser_id());
+
+                houseRoomMapper.updateByPrimaryKeySelective(houseRoom2);
+            } else {
+                // 合租
+                Map<String, Object> shareMap = new HashMap<String, Object>();
+                shareMap.put("public_flag", DictConstants.YesNo.N.value());
+                shareMap.put("house_id", fitmentHouse.getHouse_id());
+
+                // 卧室
+                HouseRoom houseRoom = houseRoomMapper.selectByPrimaryKey((String) paramsMap.get("room_id"));
+                if (null == houseRoom) {
+                    return ResultMsg.createErrorMsg("合租卧室房间不存在.");
+                }
+                shareMap.put("room_no", houseRoom.getRoom_no());
+                shareMap.put("fitment_id", fitmentHouse.getFitment_id());
+                FitmentRoom fitmentRoom = fitmentRoomMapper.selectFitmentRoomByMap(shareMap);
+                if (null == fitmentRoom) {
+                    return ResultMsg.createErrorMsg("合租卧室房间没有设计.");
+                }
+                // 卧室的委托合同ID发生变化
+                houseRoom.setHouse_contract_id((String) paramsMap.get("contract_id"));
+                houseRoom.setFitment_room_id(fitmentRoom.getFitment_room_id());
+                houseRoom.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                houseRoom.setUpdate_uid(sysUser.getUser_id());
+
+                houseRoom.setRoom_area(fitmentRoom.getRoom_area());
+                houseRoom.setRoom_orientation(fitmentRoom.getRoom_orientation());
+
+                houseRoomMapper.updateByPrimaryKeySelective(houseRoom);
+                // 公共区域更新一次
+                shareMap.put("public_flag", DictConstants.YesNo.Y.value());
+                shareMap.put("room_no", null);
+                shareMap.put("fitment_id", fitmentHouse.getFitment_id());
+                FitmentRoom fitmentRoom2 = fitmentRoomMapper.selectFitmentRoomByMap(shareMap);
+                if (null == fitmentRoom2) {
+                    return ResultMsg.createErrorMsg("合租公共区域没有设计.");
+                }
+                HouseRoom houseRoom2 = houseRoomMapper.selectByShareHouseIdAndPublicFlag(shareMap);
+                if (null == houseRoom2) {
+                    return ResultMsg.createErrorMsg("合租公共区域不存在.");
+                }
+                if (!fitmentRoom2.getFitment_room_id().equals(houseRoom2.getFitment_room_id())) {
+                    // 公共区域的委托合同ID发生变化
+                    houseRoom2.setHouse_contract_id((String) paramsMap.get("contract_id"));
+                    houseRoom2.setFitment_room_id(fitmentRoom2.getFitment_room_id());
+                    houseRoom2.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                    houseRoom2.setUpdate_uid(sysUser.getUser_id());
+
+                    houseRoomMapper.updateByPrimaryKeySelective(houseRoom2);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+}

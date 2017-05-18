@@ -1,0 +1,58 @@
+package com.isz.erp.house.service.impl;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.util.IszLogger;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.BusinessCircle;
+import com.isz.erp.facade.house.service.BusinessCircleService;
+import com.isz.erp.house.biz.BusinessCircleServiceBiz;
+
+/** 
+ * @author WangShuo * 
+ * @date 创建时间：2016年1月14日 下午3:35:25 * 
+ * @version 1.0 * 
+ * @instruction 说明：
+ */
+@Service
+public class BusinessCircleFacade implements BusinessCircleService {
+
+	@Autowired
+	private BusinessCircleServiceBiz businessCircleServiceBiz;
+	/**
+	 * 查询商圈信息
+	 * @return
+	 */
+	public ResultObjectMsg<List<BusinessCircle>> sercherTtbudinessCircleList() {
+		try {
+			return businessCircleServiceBiz.sercherTtbudinessCircleList();
+		} catch (Exception e) {
+			IszLogger.error("BusinessCircleFacade.sercherTtbudinessCircleList", e);
+			return new ResultObjectMsg<List<BusinessCircle>>(e.getMessage());
+		}
+	}
+	
+	/**
+	 * 查询商圈信息(根据市或者区)
+	 * @return
+	 */
+	@Override
+	public ResultObjectMsg<List<BusinessCircle>> sercherBudinessCircleByCode(Map<String,Object> data) {
+		try {
+			return businessCircleServiceBiz.sercherBudinessCircleByCode(data);
+		} catch (Exception e) {
+			IszLogger.error("BusinessCircleFacade.sercherBudinessCircleByCode", e);
+			return new ResultObjectMsg<List<BusinessCircle>>(e.getMessage());
+		}
+	}
+
+	@Override
+	public String getNameByIds(String business_circle_id) throws Exception {
+		return businessCircleServiceBiz.getNameByIds(business_circle_id);
+	}
+
+}

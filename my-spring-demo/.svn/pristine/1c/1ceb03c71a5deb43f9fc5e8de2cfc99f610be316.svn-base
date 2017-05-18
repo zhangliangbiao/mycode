@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.ApplyPhotoMapper">
+	<resultMap id="applyPhotoMapper" type="com.isz.erp.facade.house.entity.ApplyPhoto">
+	    <id column="apply_id" property="apply_id"/>
+	    <result column="apartment_id" property="apartment_id"/>
+	    <result column="create_time" property="create_time"/>
+	    <result column="create_uid" property="create_uid"/>
+	    <result column="update_time" property="update_time"/>
+	    <result column="update_uid" property="update_uid"/>
+	    <result column="finish_time" property="finish_time"/>
+	    <result column="finish_uid" property="finish_uid"/>
+	    <result column="status" property="status"/>
+	 </resultMap>
+	
+	<select id="selectByApartmentId" parameterType="map" resultType="com.isz.erp.facade.house.entity.ApplyPhoto">
+		select * from apply_photo  ap where ap.apartment_id=#{apartment_id} 
+	</select>
+	
+</mapper>

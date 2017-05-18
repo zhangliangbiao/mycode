@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.LockManageMapper">
+	<select id="searchApiLockInfo" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			lm.chip_id chipId,
+			lm.electric,
+			lm.house_num houseNum,
+			IFNULL(sdi.dict_value,'') roomNum,
+			lm.rssi,
+			lm.smart_lock_type smartLockType,
+			lm.state,
+			lm.third_company_name thirdCompanyName,
+			lm.`type`
+		FROM lock_manage lm
+		INNER JOIN lock_bind lb ON lm.manage_id=lb.lock_id
+		LEFT JOIN apartment a ON a.apartment_id = lb.apartment_id
+		LEFT JOIN house_room hr ON hr.house_contract_id=a.house_contract_id AND a.room_id=hr.room_id
+		LEFT JOIN sys_dict_item sdi ON sdi.dict_code='RoomNo' AND sdi.dict_key=hr.room_no
+		WHERE lm.deleted=0
+		<if test="null != roomId and '' != roomId">
+			AND lb.apartment_id=#{roomId}
+		</if>
+		<if test="null != chipId and '' != chipId">
+			AND lm.chip_id=#{chipId}
+		</if>
+		<if test="null != manageId and '' != manageId">
+			AND lm.manage_id=#{manageId}
+		</if>
+		LIMIT 1
+	</select>
+
+	<select id="searchApiApartmentByRoomIds" parameterType="java.lang.String" resultType="java.util.Map">
+		SELECT DISTINCT a.house_id baseHouseId,IFNULL(sdi.dict_value,'') roomNum ,a.apartment_id apartmentId FROM apartment a
+		LEFT JOIN house_room hr ON hr.house_contract_id=a.house_contract_id AND a.room_id=hr.room_id
+		LEFT JOIN sys_dict_item sdi ON sdi.dict_code='RoomNo' AND sdi.dict_key=hr.room_no
+		LEFT JOIN lock_bind b ON b.house_id = a.house_id
+		WHERE a.apartment_id IN (${_parameter})
+		AND a.deleted=0 AND b.is_bind='Y'
+	</select>
+
+	<select id="searchApiLockInfoByApartmentContract" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT DISTINCT
+			m.chip_id chipId,
+			m.electric,
+			m.house_num houseNum,
+			IFNULL(sdi.dict_value,'') roomNum,
+			m.rssi,
+			m.smart_lock_type smartLockType,
+			m.state,
+			m.`type`
+		FROM lock_manage m
+		LEFT JOIN lock_bind b ON m.manage_id=b.lock_id
+		LEFT JOIN apartment a ON a.house_id=b.house_id
+		LEFT JOIN house_room hr ON hr.house_contract_id=a.house_contract_id AND a.room_id=hr.room_id
+		LEFT JOIN  sys_dict_item sdi ON sdi.dict_code='RoomNo' AND sdi.dict_key=hr.room_no
+		LEFT JOIN apartment_contract_relation acr ON acr.house_id=b.house_id
+		LEFT JOIN apartment_contract ac ON ac.contract_id=acr.contract_id
+		WHERE m.deleted=0 AND b.is_bind='Y' AND ac.deleted=0
+		AND ac.entrust_type=#{rentalType} AND ac.contract_id=#{contractId}
+	</select>
+
+	<select id="searchApiLockInfoByHouseNum" parameterType="java.lang.String" resultType="java.util.Map">
+		SELECT DISTINCT
+			m.manage_id id,
+			m.num,
+			m.house_num houseNum,
+			m.chip_id chipId,
+			m.electric,
+			m.house_num houseNum,
+			m.rssi,
+			m.smart_lock_type smartLockType,
+			m.state,
+			m.`type`,
+			m.create_time,
+			m.update_time,
+			m.third_company_name thirdCompanyName
+		  FROM lock_manage m
+		  WHERE m.deleted=0 AND m.house_num=#{houseNum}
+		  LIMIT 1
+	</select>
+	
+	
+	<select id="searchApiLockManageByHouseInfo" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT 
+			lm.manage_id id,
+			lm.num,
+			lm.house_num houseNum,
+			lm.chip_id chipId,
+			lm.electric,
+			lm.house_num houseNum,
+			lm.rssi,
+			lm.smart_lock_type smartLockType,
+			lm.state,
+			lm.`type`,
+			lm.create_time,
+			lm.update_time,
+			lb.apartment_id,
+			lm.third_company_name thirdCompanyName
+		FROM lock_manage lm
+		INNER JOIN lock_bind lb on lm.manage_id = lb.lock_id
+		WHERE lb.house_id = #{houseId}
+		<if test="null == houseType">
+		   and (lb.apartment_id = #{apartmentId} or lb.apartment_id is null  or lb.apartment_id = '')
+		</if>
+		<if test="null != houseType and '' != houseType">
+		   <if test=' "0" != houseType'>
+		       and lb.apartment_id = #{apartmentId}
+		   </if>
+		       and lb.house_type = #{houseType}
+		</if>
+		and lb.is_bind = 'Y'
+	</select>
+</mapper>

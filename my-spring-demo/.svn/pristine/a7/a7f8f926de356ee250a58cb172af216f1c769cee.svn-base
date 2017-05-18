@@ -1,0 +1,69 @@
+package com.isz.erp.house.biz;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.ParameterUtil;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.ApartmentCount;
+import com.isz.erp.facade.house.entity.ApartmentCountRented;
+import com.isz.erp.house.mapper.ApartmentCountMapper;
+
+@Service("apartmentCountServiceBiz")
+public class ApartmentCountServiceBiz {
+
+	@Autowired
+	private ApartmentCountMapper apartmentCountMapper;
+	/**
+	 * 
+	 * @Description:房源统计列表查询
+	 * @return:ResultObjectMsg<PagingHelper<BuryingPoint>>
+	 * @exception:
+	 * @version 1.0 *
+	 * @author: liaorb
+	 * @time:2016年10月23日下午3:37:48
+	 */
+	public ResultObjectMsg<PagingHelper<ApartmentCount>> searchApartmentCountList(Map<String, Object> pageData) {
+		int page_num =ParameterUtil.getInt(pageData,"pageNumber",1);
+		int page_size = ParameterUtil.getInt(pageData,"pageSize",10);
+	
+		PagingHelper<ApartmentCount> ph = new PagingHelper<ApartmentCount>();
+		ph.setPerPageSize(page_size);
+		ph.setCurrentPage(page_num);
+		pageData.put("begin_num", ph.getBeginRowNumber());
+		pageData.put("end_num", ph.getEndRowNumber());
+	
+		List<ApartmentCount> list = apartmentCountMapper.searchApartmentCountList(pageData);
+		Integer count = apartmentCountMapper.searchApartmentCountListCount(pageData);
+
+		ph.setTotal(count); // 设置总的记录数
+		ph.setRows(list); // 设置返回的记录
+		ResultObjectMsg<PagingHelper<ApartmentCount>> resultObjectMsg = new ResultObjectMsg<PagingHelper<ApartmentCount>>(ph);
+		
+		
+        return resultObjectMsg;
+	}
+	
+	/**
+	 * @Description:查询自营在租详情
+	 * @return:ResultObjectMsg<ApartmentCountRented>
+	 * @exception:
+	 * @version 1.0 *
+	 * @author: liaorb
+	 * @time:2016年10月23日下午6:49:16
+	 */
+	public ResultObjectMsg<ApartmentCountRented> searchRentedDetail(Map<String, Object> pageData) {
+		String rent_type = ParameterUtil.getString(pageData, "rent_type", null);
+		String create_time = ParameterUtil.getString(pageData, "create_time", null);
+		if(null == rent_type || null == create_time )
+			return new ResultObjectMsg<ApartmentCountRented>("参数错误");
+		
+		ApartmentCountRented apartmentCountRented = apartmentCountMapper.searchApartmentCountRentedDetail(pageData);
+		return new ResultObjectMsg<ApartmentCountRented>(apartmentCountRented) ;
+	}
+
+}

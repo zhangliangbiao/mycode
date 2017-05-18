@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.ResidentialCorrectionMapper">
+	<!-- resultMap -->
+	<resultMap id="ResidentialCorrectionMap" type="com.isz.erp.facade.house.entity.ResidentialCorrection">
+	    <id column="residential_correction_id" property="residential_correction_id"/>
+	    <result column="city_code" property="city_code"/>
+	    <result column="correction_info" property="correction_info"/>
+	    <result column="correction_type" property="correction_type"/>
+	    <result column="correction_audit_uid" property="correction_audit_uid"/>
+	    <result column="correction_auidt_date" property="correction_auidt_date"/>
+	    <result column="correction_audit_status" property="correction_audit_status"/>
+	    <result column="correction_audit_opinion" property="correction_audit_opinion"/>
+	    <result column="create_time" property="create_time"/>
+	    <result column="create_uid" property="create_uid"/>
+	    <result column="update_time" property="update_time"/>
+	    <result column="update_uid" property="update_uid"/>
+	    <result column="city_name" property="city_name"/>
+	    <result column="audit_user_name" property="audit_user_name"/>
+ 	</resultMap>
+	
+	
+	<!-- 符合查询 条件的房屋信息 -->
+	<select id="searchResidentialCorrectionList" parameterType="java.util.Map" resultMap="ResidentialCorrectionMap">
+			SELECT 
+				rc.*,
+				(
+				SELECT
+					sd1.`NAME`
+					FROM
+					sys_district sd1
+					WHERE
+					sd1. CODE = rc.city_code
+				) city_name,
+				(select su1.user_name from sys_user su1 where su1.user_id=rc.create_uid) as user_name,
+				(select sd1.dep_name from sys_user su1 left join sys_department sd1 on sd1.dep_id=su1.dep_id where su1.user_id=rc.create_uid) as dep_name,
+				(select su1.user_name from sys_user su1 where su1.user_id=rc.correction_audit_uid) as audit_user_name
+				
+              FROM
+		<include refid="searchResidentialCorrectionSQL"></include>
+		<if test="null != sort and sort != ''">
+			ORDER BY ${sort}
+			<if test="null != order and order != ''">
+				${order}
+			</if>
+		</if>
+		<if test="null != offset and '' != offset and null != limit and '' != limit" > 
+			limit offset,limit
+		</if>
+		
+	</select>
+	
+	
+	<select id="countResidentialCorrection" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT count(1)
+				FROM
+		<include refid="searchResidentialCorrectionSQL"></include>
+	</select>
+	
+	<select id="selectById" parameterType="String" resultType="com.isz.erp.facade.house.entity.ResidentialCorrection">
+		SELECT * FROM residential_correction where residential_correction_id=#{residential_correction_id} and deleted=0 
+	</select>
+	
+	
+	<sql id="searchResidentialCorrectionSQL">
+		
+				
+		residential_correction rc
+		LEFT JOIN sys_user su ON su.user_id=rc.create_uid
+		LEFT JOIN sys_user sua ON sua.user_id=rc.correction_audit_uid
+				
+		<include refid="residentialCorrectionListSql"></include>
+	</sql>
+	
+	
+	<!-- 列表查询条件 -->
+	<sql id="residentialCorrectionListSql">
+		<where>
+			<trim prefixOverrides="and">
+				and rc.deleted=0
+				<if test="null != city_code_search">and rc.city_code=#{city_code_search}</if>
+				
+				<if test="null != audit_time_start_search"><![CDATA[and date(rc.correction_auidt_date) >= #{audit_time_start_search}]]></if>
+				<if test="null != audit_time_end_search"><![CDATA[and date(rc.correction_auidt_date) <= #{audit_time_end_search}]]></if>
+				
+				<if test="null != audit_status_search">and rc.correction_audit_status in (${audit_status_search})</if>
+				
+				<if test="null != correction_type_search">and rc.correction_type in (${correction_type_search})</if>
+				
+				<if test="null != correction_info_search">and rc.correction_info like CONCAT('%','${correction_info_search}','%' )</if>
+				
+				<if test="null != uid_search">and rc.create_uid in (${uid_search})</if>
+				
+				<if test="null != did_search and '' != did_search and (null ==uid_search or '' == uid_search)">
+					and su.dep_id in (select t.child_id from sys_department_flat t where t.dept_id in (${did_search}))
+				</if>
+				
+				<if test="null != audit_name_search">and sua.user_name like CONCAT('%','${audit_name_search}','%' )  </if>
+			</trim>
+		</where>
+		
+	</sql>
+	
+	
+	
+	
+</mapper>

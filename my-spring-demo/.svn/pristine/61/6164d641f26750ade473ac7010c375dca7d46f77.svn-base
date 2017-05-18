@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.HouseExplorationObjectMapper">
+
+	<select id="selectListByIdAndType" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.entity.HouseExplorationObject" >
+		select * from house_exploration_object where house_exploration_id=#{house_exploration_id} and object_type=#{object_type}
+	</select>
+	
+	<select id="selectLandordListById" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.entity.HouseExplorationObject" >
+		select * from house_exploration_object where house_exploration_id=#{house_exploration_id} and object_type='LANDORD'
+	</select>
+	
+	<select id="selectIntentionListById" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.entity.HouseExplorationObject" >
+		select * from house_exploration_object where house_exploration_id=#{house_exploration_id} and object_type='INTENTION'
+	</select>
+	
+</mapper>

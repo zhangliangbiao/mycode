@@ -1,0 +1,25 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseRolesChangeHistory;
+import com.isz.erp.facade.user.entity.SysPosition;
+import com.isz.erp.facade.user.entity.SysUser;
+
+public interface HouseRolesChangeHistoryMapper extends Mapper<HouseRolesChangeHistory> {
+	/**
+	 * 查询资产管家
+	 * @return
+	 */
+	public List<SysPosition> selectPositionByAssetManager(Map<String,String> map);
+	
+	public SysUser selectUserByUserId(String user_id);
+	
+	/**
+	 * 查询改房源的最后变跟记录
+	 * @return
+	 */
+	public HouseRolesChangeHistory selectLastRecord(Map<String,Object> map);
+}

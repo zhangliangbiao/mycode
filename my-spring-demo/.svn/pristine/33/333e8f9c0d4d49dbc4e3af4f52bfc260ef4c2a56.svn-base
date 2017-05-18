@@ -1,0 +1,143 @@
+package com.isz.erp.house.service.impl;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.IszLogger;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.FitmentHouse;
+import com.isz.erp.facade.house.service.DesignService;
+import com.isz.erp.facade.house.vo.BreaksUpHouseVo;
+import com.isz.erp.facade.house.vo.HouseContractVo;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.biz.DesignServiceBiz;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
+
+/**
+ * 设计工程实现类
+ *
+ * @author SZP * zhipenglees@gmail.com
+ * @version 1.0 *
+ * @date 创建时间：2016年3月5日 上午10:12:44 *
+ * @instruction 说明：设计工程实现类
+ */
+@Service("designServiceFacade")
+public class DesignServiceFacade implements DesignService {
+
+    @Autowired
+    private DesignServiceBiz designServiceBiz;
+
+    @Override
+    public ResultObjectMsg<PagingHelper<HouseContractVo>> searchHouseContractList(Map<String, Object> pageData) {
+        try {
+            return designServiceBiz.searchHouseContractVoList(pageData);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.searchHouseContractVoList", e);
+            return new ResultObjectMsg<PagingHelper<HouseContractVo>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveBreaksUpHouse(SessionVo sessionVo, BreaksUpHouseVo breaksUpHouseVo) {
+        try {
+            return designServiceBiz.saveBreaksUpHouse(sessionVo, breaksUpHouseVo);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.saveBreaksUpHouse", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<BreaksUpHouseVo> selectDesignDetail(SessionVo sessionVo, Map<String, Object> pageData) {
+        try {
+            return designServiceBiz.selectDesignDetail(sessionVo, pageData);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.selectEntireDesignDetail", e);
+            return new ResultObjectMsg<BreaksUpHouseVo>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<FitmentHouse> selectFitmentHouseDetail(Map<String, Object> pageData) {
+        try {
+            return designServiceBiz.selectFitmentHouseDetail(pageData);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.selectFitmentHouseDetail", e);
+            return new ResultObjectMsg<FitmentHouse>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg sendOrder(SysUser sysUser, FitmentHouse fitmentHouse) {
+        try {
+            return designServiceBiz.sendOrder(sysUser, fitmentHouse);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.sendOrder", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg closingRoom(SysUser sysUser, FitmentHouse fitmentHouse) {
+        try {
+            return designServiceBiz.closingRoom(sysUser, fitmentHouse);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.closingRoom", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<PagingHelper<FitmentHouse>> selectFitmentHistoryList(Map<String, Object> pageData) {
+        try {
+            return designServiceBiz.selectFitmentHistoryList(pageData);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.selectFitmentHistoryList", e);
+            return new ResultObjectMsg<PagingHelper<FitmentHouse>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg haveApartmentContract(Map<String, Object> pageData) {
+        try {
+            return designServiceBiz.haveApartmentContract(pageData);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.haveApartmentContract", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg deleteShareRoom(SysUser sysUser, Map<String, Object> pageData) {
+        try {
+            return designServiceBiz.deleteShareRoom(sysUser, pageData);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.deleteShareRoom", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg activateFitmentHouse(SysUser sysUser, Map<String, Object> houseContractMap) {
+        try {
+            return designServiceBiz.activateFitmentHouse(sysUser, houseContractMap);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.deleteShareRoom", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg activateHouseRoom(SysUser sysUser, Map<String, Object> paramsMap) {
+        try {
+            return designServiceBiz.activateHouseRoom(sysUser, paramsMap);
+        } catch (Exception e) {
+            IszLogger.error("DesignServiceFacade.activateHouseRoom", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+}

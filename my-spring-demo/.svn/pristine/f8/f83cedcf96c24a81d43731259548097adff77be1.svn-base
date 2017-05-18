@@ -1,0 +1,30 @@
+<beans xmlns="http://www.springframework.org/schema/beans"  
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:rabbit="http://www.springframework.org/schema/rabbit"  
+       xsi:schemaLocation="http://www.springframework.org/schema/beans  
+     http://www.springframework.org/schema/beans/spring-beans-3.0.xsd  
+     http://www.springframework.org/schema/rabbit  
+     http://www.springframework.org/schema/rabbit/spring-rabbit-1.2.xsd">  
+    <!--              分隔线                -->  
+    <!--配置connection-factory，指定连接rabbit server参数 -->  
+    <rabbit:connection-factory id="connectionFactory"  
+                               username="${rabbitmq.connect.username}" password="${rabbitmq.connect.password}" 
+                               host="${rabbitmq.connect.host}" port="${rabbitmq.connect.port}"/>  
+  
+    <!--定义rabbit template用于数据的接收和发送 -->  
+    <rabbit:template id="amqpTemplate" connection-factory="connectionFactory"  
+                     exchange="exchangeIsz"/>  
+  
+    <!--通过指定下面的admin信息，当前producer中的exchange和queue会在rabbitmq服务器上自动生成 -->  
+    <rabbit:admin id="connectAdmin" connection-factory="connectionFactory"/>  
+  
+    <!--定义queue -->  
+    <rabbit:queue name="queue_erp" durable="true" auto-delete="false" exclusive="false" declared-by="connectAdmin"/>  
+  
+    <!-- 定义direct exchange，绑定queueTest -->  
+    <rabbit:topic-exchange name="exchangeIsz" durable="true" auto-delete="false" declared-by="connectAdmin">  
+        <rabbit:bindings>  
+            <rabbit:binding queue="queue_erp"  pattern="isz.*"></rabbit:binding>  
+        </rabbit:bindings>  
+    </rabbit:topic-exchange>  
+  
+</beans>  

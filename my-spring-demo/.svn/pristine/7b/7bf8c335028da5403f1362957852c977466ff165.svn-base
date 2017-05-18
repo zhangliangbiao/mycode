@@ -1,0 +1,182 @@
+package com.isz.erp.house.service.impl;
+
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.IszLogger;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.house.entity.ApplyPhoto;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.OnlineHouseInfo;
+import com.isz.erp.facade.house.service.OnlineHouseService;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.biz.OnlineHouseServiceBiz;
+
+/**
+ * 官网发布接口实现
+ *
+ * @author hjj 
+ * @version 1.0 *
+ * @date 创建时间：2016年7月7日 下午3:36:03
+ * @instruction 说明：
+ */
+@Service("onlineHouseServiceFacade")
+public class OnlineHouseServiceFacade implements OnlineHouseService {
+
+    @Autowired
+    private OnlineHouseServiceBiz onlineHouseServiceBiz;
+
+    @Override
+    public ResultMsg saveOnlineHouseInfo(OnlineHouseInfo onlineHouseInfo, SessionVo sessionVo) {
+        try {
+            return onlineHouseServiceBiz.saveOnlineHouseInfo(onlineHouseInfo, sessionVo);
+        } catch (Exception e) {
+            IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+	@Override
+	public ResultObjectMsg<OnlineHouseInfo> selectOnlineHouseInfoDetail(
+			SessionVo sessionVo, String apartmentId) {
+		  try {
+			  return onlineHouseServiceBiz.selectOnlineHouseInfoDetail(sessionVo, apartmentId);
+		  } catch (Exception e) {
+			  IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+	            return new ResultObjectMsg<OnlineHouseInfo>(e.getMessage());
+		  }
+	}
+
+	@Override
+	public ResultObjectMsg<OnlineHouseInfo> selectOnlineBaseHouseInfoDetail(
+			SessionVo sessionVo, String houseId) {
+		  try {
+			  return onlineHouseServiceBiz.selectOnlineBaseHouseInfoDetail(sessionVo, houseId);
+		  } catch (Exception e) {
+			  IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+	            return new ResultObjectMsg<OnlineHouseInfo>(e.getMessage());
+		  }
+	}
+	
+	@Override
+	public ResultMsg validOnlineHouse(String apartmentId, String rentType,SessionVo sessionVo) {
+		try {
+            return onlineHouseServiceBiz.validOnlineHouse(apartmentId, rentType,sessionVo);
+        } catch (Exception e) {
+            IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+	}
+	
+	@Override
+	public ResultMsg validOnlineBaseHouse(String houseId, SessionVo sessionVo) {
+		try {
+            return onlineHouseServiceBiz.validOnlineBaseHouse(houseId, sessionVo);
+        } catch (Exception e) {
+            IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+	}
+	
+	
+	 @Override
+	    public ResultObjectMsg<PagingHelper<Apartment>> searchOnlineApartmentList(Map<String, Object> pageData) {
+	        try {
+	            return onlineHouseServiceBiz.searchOnlineApartmentList(pageData);
+	        } catch (Exception e) {
+	            IszLogger.error("ApartmentServiceFacade.searchApartmentList", e);
+	            return new ResultObjectMsg<PagingHelper<Apartment>>(e.getMessage());
+	        }
+	    }
+
+	 
+	 @Override
+	    public ResultObjectMsg<PagingHelper<Apartment>> searchApplyPhotoApartmentList(Map<String, Object> pageData) {
+	        try {
+	            return onlineHouseServiceBiz.searchApplyPhotoApartmentList(pageData);
+	        } catch (Exception e) {
+	            IszLogger.error("ApartmentServiceFacade.searchApartmentList", e);
+	            return new ResultObjectMsg<PagingHelper<Apartment>>(e.getMessage());
+	        }
+	    }
+	 
+	@Override
+	public ResultMsg auditOnlineHouseInfo(OnlineHouseInfo onlineHouseInfo,
+			SessionVo sessionVo) {
+		 try {
+	            return onlineHouseServiceBiz.auditOnlineHouseInfo(onlineHouseInfo, sessionVo);
+	        } catch (Exception e) {
+	            IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+	            return ResultMsg.createErrorMsg(e.getMessage());
+	        }
+	}
+	
+	@Override
+	public ResultMsg addOnlineHouseToTags(OnlineHouseInfo onlineHouseInfo,
+			SessionVo sessionVo) {
+		 try {
+	            return onlineHouseServiceBiz.addOnlineHouseToTags(onlineHouseInfo, sessionVo);
+	        } catch (Exception e) {
+	            IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+	            return ResultMsg.createErrorMsg(e.getMessage());
+	        }
+	}
+	
+
+	 @Override
+	    public ResultObjectMsg<PagingHelper<House>> searchHouse(Map<String, Object> pageData) {
+	        try {
+	            return onlineHouseServiceBiz.searchHouse(pageData);
+	        } catch (Exception e) {
+	            IszLogger.error("HouseServiceFacade.searchHouse", e);
+	            return new ResultObjectMsg<PagingHelper<House>>(e.getMessage());
+	        }
+	    }
+	 
+	 @Override
+	public ResultMsg applyHouseImg(ApplyPhoto applyPhoto,
+				SessionVo sessionVo) {
+			 try {
+		            return onlineHouseServiceBiz.applyHouseImg(applyPhoto, sessionVo);
+		        } catch (Exception e) {
+		            IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+		            return ResultMsg.createErrorMsg(e.getMessage());
+		        }
+		}
+	 
+	 @Override
+	 public ResultMsg finishPhoto(ApplyPhoto applyPhoto, SessionVo sessionVo) {
+			 try {
+		            return onlineHouseServiceBiz.finishPhoto(applyPhoto, sessionVo);
+		        } catch (Exception e) {
+		            IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+		            return ResultMsg.createErrorMsg(e.getMessage());
+		        }
+		}
+	 
+	 
+	@Override
+	public ResultMsg rejectPhoto(ApplyPhoto applyPhoto, SessionVo sessionVo) {
+		try {
+			return onlineHouseServiceBiz.rejectPhoto(applyPhoto, sessionVo);
+		} catch (Exception e) {
+			IszLogger.error("ApartmentServiceFacade.saveEntireHouse", e);
+			return ResultMsg.createErrorMsg(e.getMessage());
+		}
+	}
+
+	@Override
+	public ResultObjectMsg<PagingHelper<House>> searchHouseList(Map<String, Object> pageData) {
+		try {
+			return onlineHouseServiceBiz.searchHouseList(pageData);
+		} catch (Exception e) {
+			IszLogger.error("onlineHouseServiceBiz.searchHouseList", e);
+			return new ResultObjectMsg<PagingHelper<House>>(e.getMessage());
+		}
+	}
+}

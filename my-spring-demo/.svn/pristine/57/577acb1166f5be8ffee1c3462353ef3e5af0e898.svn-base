@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.HouseRentMapper">
+	<!-- resultMap -->
+	<resultMap id="HouseRentBaseMap" type="com.isz.erp.facade.house.entity.HouseRent">
+	    <id column="house_id" property="house_id"/>
+	    <result column="residential_id" property="residential_id"/>
+	    <result column="building_id" property="building_id"/>
+	    <result column="online_status" property="online_status"/>
+	    <result column="online_time" property="online_time"/>
+	    
+	    <result column="activated_time" property="activated_time"/>
+	    <result column="house_status" property="house_status"/>
+	    <result column="look_type" property="look_type"/>
+	    <result column="look_date" property="look_date"/>
+	    <result column="look_remark" property="look_remark"/>
+	    <result column="source" property="source"/>
+	    <result column="now_status" property="now_status"/>
+	    <result column="rental_price" property="rental_price"/>
+	    <result column="belong_did" property="belong_did"/>
+	    <result column="belong_uid" property="belong_uid"/>
+	     <result column="belong_did_name" property="belong_did_name"/>
+	    <result column="belong_uid_name" property="belong_uid_name"/>
+	    <result column="remark" property="remark"/>
+	    <result column="deleted" property="deleted"/>
+	    <result column="create_time" property="create_time"/>
+	    <result column="create_uid" property="create_uid"/>
+	    <result column="update_time" property="update_time"/>
+	    <result column="update_uid" property="update_uid"/>
+	    <result column="web_manager_uid" property="web_manager_uid"/>
+	    <result column="web_manager_did" property="web_manager_did"/>
+		<result column="category" property="category"/>
+		<result column="cultivation_uid" property="cultivation_uid"/>
+		<result column="cultivation_time" property="cultivation_time"/>
+		<result column="exploration_uid" property="exploration_uid"/>
+		<result column="exploration_time" property="exploration_time"/>
+		<result column="activated_uid" property="activated_uid"/>
+		<result column="wash_uid" property="wash_uid"/>
+		
+		<result column="user_dep_belong" property="user_dep_belong"/>
+		<result column="user_dep_cultivation" property="user_dep_cultivation"/>
+		<result column="user_dep_exploration" property="user_dep_exploration"/>
+		<result column="user_dep_web_manager" property="user_dep_web_manager"/>
+		<result column="user_dep_activated" property="user_dep_activated"/>
+		<result column="user_dep_create" property="user_dep_create"/>
+		<result column="user_dep_wash" property="user_dep_wash"/>
+		<result column="belong_time" property="belong_time"/>
+		
+ 	</resultMap>
+ 	
+	<!-- 插入一条楼盘房屋出租信息(扩展表) -->
+	<insert id="insertHouseRent" parameterType="com.isz.erp.facade.house.entity.HouseRent">
+		INSERT INTO `house_rent` 
+			(`house_id`, `residential_id`, `building_id`, `online_status`, `activated_time`, `house_status`, `look_type`, 
+			`look_date`,`look_remark`, `source`, `now_status`, `rental_price`, `belong_did`, `belong_uid`, `remark`, `deleted`, `create_time`, `create_uid`, 
+			`update_time`, `update_uid`, `web_manager_uid`,`category`,
+			web_officail_date,cultivation_uid,cultivation_time,exploration_uid,exploration_time,activated_uid,wash_uid)
+		VALUES 
+			(#{house_id}, #{residential_id}, #{building_id}, #{online_status}, #{activated_time}, #{house_status}, #{look_type}, 
+			#{look_date}, #{look_remark}, #{source}, #{now_status}, #{rental_price}, #{belong_did}, #{belong_uid}, #{remark}, #{deleted}, #{create_time}, #{create_uid}, 
+			#{update_time}, #{update_uid}, #{web_manager_uid},#{category},
+			#{web_officail_date}, #{cultivation_uid}, #{cultivation_time}, #{exploration_uid}, #{exploration_time}, #{activated_uid}, #{wash_uid})
+	</insert>
+	<!-- 根据house_id更新楼盘房屋出租信息 -->
+	<update id="updateHouseRent" parameterType="com.isz.erp.facade.house.entity.HouseRent">
+		UPDATE `house_rent`
+		SET
+			`residential_id`=#{residential_id},`building_id`=#{building_id},`online_status`=#{online_status},`activated_time`=#{activated_time},
+			`house_status`=#{house_status},`look_type`=#{look_type},`look_date`=#{look_date},`look_remark`=#{look_remark},`source`=#{source},`now_status`=#{now_status},
+			`rental_price`=#{rental_price},`belong_did`=#{belong_did},`belong_uid`=#{belong_uid},`remark`=#{remark},`deleted`=#{deleted},`create_time`=#{create_time},
+			`create_uid`=#{create_uid},`update_time`=#{update_time},`update_uid`=#{update_uid},`web_manager_uid`=#{web_manager_uid}
+		WHERE `house_id`=#{house_id}
+	</update>
+	<!-- 根据house_id返回一条记录 -->
+	<select id="selectByHouseId" parameterType="java.lang.String" resultMap="HouseRentBaseMap">
+		SELECT
+			hr.house_id,hr.residential_id,hr.building_id,hr.online_status,hr.activated_time,hr.house_status,hr.rent_longtime,hr.his_rent_date,hr.lease_type,hr.trusteeship,
+			hr.look_type,hr.look_date,hr.look_remark,hr.source,hr.now_status,hr.rental_price,asu.dep_id as belong_did,hr.belong_uid,hr.remark,hr.deleted,hr.category,
+			hr.create_time,hr.create_uid,hr.update_time,hr.update_uid,hr.web_manager_uid,su.dep_id web_manager_did,hr.cultivation_uid,hr.cultivation_time,hr.exploration_uid,
+			hr.exploration_time,hr.activated_uid,hr.wash_uid,
+			sd.dep_name as 'belong_did_name',
+			asu.user_name as 'belong_uid_name',
+			hr.belong_time,
+			(select CONCAT(su.user_name,'/',sd.dep_name)   from sys_user su LEFT JOIN sys_department sd ON sd.dep_id=su.dep_id where su.user_id=hr.belong_uid) as 'user_dep_belong',
+			(select CONCAT(su.user_name,'/',sd.dep_name)   from sys_user su LEFT JOIN sys_department sd ON sd.dep_id=su.dep_id where su.user_id=hr.cultivation_uid) as 'user_dep_cultivation',
+			(select CONCAT(su.user_name,'/',sd.dep_name)   from sys_user su LEFT JOIN sys_department sd ON sd.dep_id=su.dep_id where su.user_id=hr.exploration_uid) as 'user_dep_exploration',
+			(select CONCAT(su.user_name,'/',sd.dep_name)   from sys_user su LEFT JOIN sys_department sd ON sd.dep_id=su.dep_id where su.user_id=hr.web_manager_uid) as 'user_dep_web_manager',
+			(select CONCAT(su.user_name,'/',sd.dep_name)   from sys_user su LEFT JOIN sys_department sd ON sd.dep_id=su.dep_id where su.user_id=hr.activated_uid) as 'user_dep_activated',
+			(select CONCAT(su.user_name,'/',sd.dep_name)   from sys_user su LEFT JOIN sys_department sd ON sd.dep_id=su.dep_id where su.user_id=hr.create_uid) as 'user_dep_create',		
+			(select CONCAT(su.user_name,'/',sd.dep_name)   from sys_user su LEFT JOIN sys_department sd ON sd.dep_id=su.dep_id where su.user_id=hr.wash_uid) as 'user_dep_wash',
+			(select audit_time from online_house_info where house_id=hr.house_id AND audit_status='APPLE_ISSURE' ) as 'online_time' 
+		FROM
+			house_rent AS hr 
+			left join sys_user asu on asu.user_id = hr.belong_uid
+			left join sys_department sd on sd.dep_id=asu.dep_id
+			LEFT JOIN sys_user su ON hr.web_manager_uid=su.user_id
+			
+		WHERE
+			hr.deleted=0 AND hr.house_id=#{house_id}
+	</select>
+	<!-- 更新房屋状态或房源类别 -->
+	<update id="updateHouseStatusCategory" parameterType="com.isz.erp.facade.house.entity.HouseRent">
+		UPDATE house_rent hr SET hr.update_time=#{update_time},hr.update_uid=#{update_uid}
+		<if test="null != house_status and '' != house_status">
+			,hr.house_status=#{house_status}
+		</if>
+		<if test="null != category">
+			,hr.category=#{category}
+		</if>
+		WHERE hr.house_id=#{house_id}
+	</update>
+	<!-- 查询所有的有效房源 -->
+	<select id="getValidHouseRent"  resultType="com.isz.erp.facade.house.entity.HouseRent">
+		<![CDATA[select hr.* from house_rent hr where hr.deleted=0 and hr.house_status<>'INVALID']]>
+	</select>
+	
+	
+	<select id="selectSysDepUser"  resultType="int" parameterType="java.util.Map">
+		<![CDATA[SELECT COUNT(user_id) from sys_user su where su.user_id=#{user_id} 
+		and EXISTS(SELECT 1 from sys_department_flat sdf where sdf.dept_id=#{dept_id} and child_id=su.dep_id)]]>
+	</select>
+	
+	
+	<!-- 根据house_id更新楼盘房屋角色人信息 -->
+	<update id="updateHouseRentRoles" parameterType="com.isz.erp.facade.house.entity.HouseRent">
+		update house_rent set 
+		<if test="null != house_status and '' != house_status">
+		activated_uid=#{activated_uid},activated_time=#{activated_time}
+		</if>
+		<if test="null != cultivation_uid  and '' != cultivation_uid">
+		,cultivation_uid=#{cultivation_uid},cultivation_time=#{cultivation_time}
+		</if>
+		<if test="null != exploration_uid  and '' != exploration_uid">
+		,exploration_uid=#{exploration_uid},exploration_time=#{exploration_time} 
+		</if>
+		<if test="null != wash_uid  and '' != wash_uid">
+		,wash_uid=#{wash_uid}
+		</if>
+		where 
+		house_id=#{house_id} 
+	</update>
+	
+</mapper>

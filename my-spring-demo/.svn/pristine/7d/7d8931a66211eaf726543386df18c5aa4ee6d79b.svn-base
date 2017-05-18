@@ -1,0 +1,23 @@
+package com.isz.erp.house.biz;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.isz.erp.house.util.HttpClientUtil;
+
+public class AishangfangHouseBiz {
+	private String post_url = "test.52aishangfang.com/api/ajaxauditnew";
+
+	public void postResult(String house_develop_id, String audit, String remark) {
+		try {
+			HttpClientUtil http = new HttpClientUtil();
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("house_develop_id", house_develop_id);
+			params.put("audit", audit);
+			params.put("remark", remark);
+			http.postForm(post_url, params);
+		} catch (Exception ce) {
+			
+		}
+	}
+}

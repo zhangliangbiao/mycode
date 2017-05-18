@@ -1,0 +1,70 @@
+package com.isz.erp.house.biz;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.exceptions.CException;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.common.util.StringUtil;
+import com.isz.erp.facade.house.entity.BusinessCircle;
+import com.isz.erp.house.mapper.BusinessCircleMapper;
+
+/** 
+ * @author WangShuo * 
+ * @date 创建时间：2016年1月21日 下午9:10:20 * 
+ * @version 1.0 * 
+ * @instruction 说明：
+ */
+@Service("businessCircleServiceBiz")
+public class BusinessCircleServiceBiz {
+	
+	@Autowired
+	private BusinessCircleMapper ttBusinessCircleMapper;
+	
+	/**
+	 * 查询商圈信息
+	 * @return
+	 */
+	public ResultObjectMsg<List<BusinessCircle>> sercherTtbudinessCircleList() throws Exception{
+		List<BusinessCircle> list = ttBusinessCircleMapper.sercherTtbudinessCircleList();
+		return new ResultObjectMsg<List<BusinessCircle>>(list);
+	}
+	
+	/**
+	 * 查询商圈信息(根据市或者区)
+	 * @return
+	 */
+	public ResultObjectMsg<List<BusinessCircle>> sercherBudinessCircleByCode(Map<String,Object> data) throws CException{
+		List<String> paraList = new ArrayList<String>();
+		paraList.add("area_code");
+		data = StringUtil.readAndWritePageData(data,paraList);
+		List<BusinessCircle> list = ttBusinessCircleMapper.sercherBudinessCircleByCode(data);
+		return new ResultObjectMsg<List<BusinessCircle>>(list);
+	}
+
+	/**
+	 * 根据Id查名称
+	 * @param business_circle_id
+	 * @return
+	 */
+	public String getNameByIds(String business_circle_ids) {
+		String name = "";
+	
+		if (StringUtil.notNullOrEmpty(business_circle_ids)) {
+			String[] ids =business_circle_ids.split(",");
+			for (String business_circle_id : ids) {
+				BusinessCircle businessCircle = ttBusinessCircleMapper.selectByPrimaryKey(business_circle_id);
+				if (null != businessCircle) {
+					name = businessCircle.getBusiness_circle_name()+",";
+				}
+			}
+			
+		}
+		return name;
+	}
+
+}

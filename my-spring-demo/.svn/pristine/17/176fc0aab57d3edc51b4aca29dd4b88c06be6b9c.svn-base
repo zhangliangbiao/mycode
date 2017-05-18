@@ -1,0 +1,233 @@
+package com.isz.erp.house.biz;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.DateUtil;
+import com.isz.erp.common.util.DictConstants;
+import com.isz.erp.common.util.ParameterUtil;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.common.util.StringUtil;
+import com.isz.erp.common.util.UuidUtil;
+import com.isz.erp.facade.house.entity.HouseExploration;
+import com.isz.erp.facade.house.entity.HouseExplorationImg;
+import com.isz.erp.facade.house.entity.HouseExplorationObject;
+import com.isz.erp.facade.house.entity.HouseImg;
+import com.isz.erp.facade.house.entity.HouseRent;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.mapper.HouseExplorationImgMapper;
+import com.isz.erp.house.mapper.HouseExplorationMapper;
+import com.isz.erp.house.mapper.HouseExplorationObjectMapper;
+import com.isz.erp.house.mapper.HouseImgMapper;
+
+/**
+ * 房源实勘业务实现
+ *
+ * @author hjj 
+ * @version 1.0 *
+ * @date 创建时间：2016年10月27日 下午3:38:09
+ * @instruction 说明：
+ */
+@Service("houseExplorationServiceBiz")
+public class HouseExplorationServiceBiz {
+	
+	@Autowired
+	private HouseExplorationMapper houseExplorationMapper;
+	@Autowired
+	private HouseExplorationObjectMapper houseExplorationObjectMapper;
+	@Autowired
+	private HouseExplorationImgMapper houseExplorationImgMapper;
+	
+	@Autowired
+	private HouseImgMapper houseImgMapper;
+	/**
+	 * 新增房源实勘详情
+	 * @param houseExploration
+	 * @param sessionVo
+	 * @return
+	 */
+	public ResultMsg saveHouseExploration(HouseExploration houseExploration,
+			SessionVo sessionVo) {
+		//校验必填项
+		ResultMsg resultMsg = valideHouseExploration(houseExploration);
+		if(resultMsg!=null){
+			return resultMsg;
+		}
+		SysUser sysUser = sessionVo.getSysUser();
+		houseExploration.initBase(sysUser.getUser_id());
+		int i = houseExplorationMapper.insert(houseExploration);
+		//意向产品
+		List<HouseExplorationObject> intentionProductList = houseExploration.getIntentionProductList();
+		for (HouseExplorationObject houseExplorationObject : intentionProductList) {
+			houseExplorationObject.createBase(houseExploration);
+			houseExplorationObjectMapper.insert(houseExplorationObject);
+		}
+		//房东类型
+		List<HouseExplorationObject> landordTypeList = houseExploration.getLandordTypeList();
+		for (HouseExplorationObject houseExplorationObject : landordTypeList) {
+			houseExplorationObject.createBase(houseExploration);
+			houseExplorationObjectMapper.insert(houseExplorationObject);
+		}
+		//是否是初勘
+		if(DictConstants.YesNo.Y.getKeyEn().equals(houseExploration.getIs_first_exploration())){
+			List<HouseExplorationImg> houseExplorationImgList = houseExploration.getHouseExplorationImgList();
+			for (HouseExplorationImg houseExplorationImg : houseExplorationImgList) {
+				houseExplorationImg.createBase(houseExploration);
+				houseExplorationImgMapper.insert(houseExplorationImg);
+			}
+		}
+		
+		return ResultMsg.createOkMsg();
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+	private ResultMsg valideHouseExploration(HouseExploration houseExploration) {
+		if(StringUtil.isNullOrEmpty(houseExploration.getIntention_rent_price())){
+			return ResultMsg.createErrorMsg("请输入意向租金.");
+		}
+		if(StringUtil.isNullOrEmpty(houseExploration.getMarket_price())){
+			return ResultMsg.createErrorMsg("请输入市场价.");
+		}
+		if(StringUtil.isNullOrEmpty(houseExploration.getPlan_in_price())){
+			return ResultMsg.createErrorMsg("请输入预计收进价.");
+		}
+		if(StringUtil.isNullOrEmpty(houseExploration.getPlan_configuration_price())){
+			return ResultMsg.createErrorMsg("请输入预计配置总成本.");
+		}
+		if(StringUtil.isNullOrEmpty(houseExploration.getPlan_out_price())){
+			return ResultMsg.createErrorMsg("请输入预计出房价.");
+		}
+		if(houseExploration.getIntentionProductList()==null||houseExploration.getIntentionProductList().size()==0){
+			return ResultMsg.createErrorMsg("请选择意向产品");
+		}
+		if(houseExploration.getLandordTypeList()==null||houseExploration.getLandordTypeList().size()==0){
+			return ResultMsg.createErrorMsg("请选择房东类型");
+		}
+		if(StringUtil.isNullOrEmpty(houseExploration.getFitment_type())){
+			return ResultMsg.createErrorMsg("请选择装修情况.");
+		}
+		if(StringUtil.isNullOrEmpty(houseExploration.getIs_n())){
+			return ResultMsg.createErrorMsg("请选择是否N+1.");
+		}
+		if(StringUtil.isNullOrEmpty(houseExploration.getIs_landord())){
+			return ResultMsg.createErrorMsg("请选择是否见过业主.");
+		}
+		return null;
+	}
+
+
+
+
+
+	public ResultMsg saveHouseExplorationImg(
+			HouseExplorationImg houseExplorationImg, SessionVo session) {
+		// TODO Auto-generated method stub
+		return ResultMsg.createOkMsg();
+	}
+
+
+
+	public ResultObjectMsg<PagingHelper<HouseExploration>> searchHouseExplorationList(Map<String, Object> pageData,
+			SessionVo sessions) {
+		int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+        if (null != sessionVo) {
+            SysUser sysUser = sessionVo.getSysUser();
+            pageData.put("current_city_code", sysUser.getCurrent_city_code());
+        }
+
+        PagingHelper<HouseExploration> ph = new PagingHelper<HouseExploration>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+        List<HouseExploration> list = houseExplorationMapper.searchHouseExplorationList(pageData);
+        Integer count = houseExplorationMapper.countSearchHouseExploration(pageData); 
+        
+
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<HouseExploration>>(ph);
+				
+	}
+
+	public ResultObjectMsg<List<HouseExplorationImg>> selectHouseExplorationImgList(Map<String, Object> pageData,
+			SessionVo sessions){
+		String house_exploration_id= ParameterUtil.getString(pageData, "house_exploration_id", "");
+		List<HouseExplorationImg> list=houseExplorationImgMapper.selectHouseExplorationImgList(house_exploration_id);
+		ResultObjectMsg<List<HouseExplorationImg>> resultObj=new ResultObjectMsg<List<HouseExplorationImg>>().createOkMsg();
+		resultObj.setObj(list);
+		return resultObj;
+	}
+	
+	public ResultMsg deleteHouseExploration(Map<String, Object> pageData){
+		String house_exploration_id= ParameterUtil.getString(pageData, "house_exploration_id", "");
+		houseExplorationMapper.deleteHouseExploration(house_exploration_id);
+		return ResultMsg.createOkMsg();
+	}
+	
+	public ResultMsg auditHouseExploration(Map<String, Object> pageData){
+		String house_exploration_id= ParameterUtil.getString(pageData, "house_exploration_id", "");
+		String audit_status= ParameterUtil.getString(pageData, "audit_status", "");
+		String audit_content= ParameterUtil.getString(pageData, "audit_content", "");
+		HouseExploration houseExploration=houseExplorationMapper.selectByPrimaryKey(house_exploration_id);
+		if(houseExploration==null){
+			return ResultMsg.createErrorMsg("审核失败");
+		}
+		SysUser user =(SysUser) pageData.get("sysUser");;
+		houseExploration.setAudit_status(audit_status);
+		houseExploration.setAudit_remark(audit_content);
+		houseExploration.setAudit_time(DateUtil.getCurrentDateTimeAsString());
+		houseExploration.setAudit_uid(user.getUser_id());
+		if(DictConstants.AuditStatus.PASS.value().equals(audit_status)){
+			//房源图片
+			List<HouseImg> list= houseExplorationMapper.selectHouseExplorationHouseImgList(house_exploration_id);
+			for(int i=0;list!=null && i<list.size();i++){
+				HouseImg img=list.get(i);
+				img.setHouse_img_id(UuidUtil.getUUID());
+				img.setIs_first_exploration("Y");
+				img.setAudit_status(audit_status);
+				img.setAudit_time(DateUtil.getCurrentDateTimeAsString());
+				img.setAudit_uid(user.getUser_id());
+				img.setDeleted(0);
+				img.setSort(0);
+				img.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+				img.setCreate_uid(user.getUser_id());
+				houseImgMapper.insertHouseImg(img);
+			}
+			
+			HouseRent houseRent=new HouseRent();
+			houseRent.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+			houseRent.setUpdate_uid(user.getUser_id());
+			houseRent.setExploration_time(houseExploration.getCreate_time());
+			houseRent.setExploration_uid(houseExploration.getCreate_uid());
+			houseRent.setHouse_id(houseExploration.getHouse_id());
+			houseExplorationMapper.updateHouseRentExploration_uid(houseRent);
+		}else if(DictConstants.AuditStatus.NO_PASS.value().equals(audit_status)){
+		}
+		houseExplorationMapper.updateByPrimaryKey(houseExploration);
+		return ResultMsg.createOkMsg();
+	}
+   
+}

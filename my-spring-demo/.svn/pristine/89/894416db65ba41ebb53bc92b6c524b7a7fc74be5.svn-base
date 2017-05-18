@@ -1,0 +1,36 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.facade.house.vo.ApartmentContractVo;
+
+/**
+ * 出租合同查询
+ * 
+ * @author SZP * zhipenglees@gmail.com
+ * @date 创建时间：2016年4月8日 下午2:08:32 *
+ * @version 1.0 *
+ * @instruction 说明：出租合同查询
+ */
+public interface ApartmentContractVoMapper {
+
+	public List<ApartmentContractVo> selectByHouseInfo(Map<String, Object> paramsMap);
+
+	public ApartmentContractVo selectRecentByApartment(Map<String,Object> map);
+
+	/**
+	 * 获取出租合同列表
+	 * @param pageData
+	 * @return
+	 */
+	public List<ApartmentContractVo> selectApartmentContractList(Map<String, Object> pageData);
+
+	/**
+	 * 获取出租合同总数
+	 * @param pageData
+	 * @return
+	 */
+	public Integer countApartmentContract(Map<String, Object> pageData);
+
+}

@@ -1,0 +1,284 @@
+package com.isz.erp.house.biz;
+
+import com.isz.erp.common.util.*;
+import com.isz.erp.facade.house.entity.LockManage;
+import com.isz.erp.facade.house.entity.LockOpenRecord;
+import com.isz.erp.facade.house.entity.LockPassword;
+import com.isz.erp.house.mapper.LockBindMapper;
+import com.isz.erp.house.mapper.LockManageMapper;
+import com.isz.erp.house.mapper.LockOpenRecordMapper;
+import com.isz.erp.house.mapper.LockPasswordMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by shaozhipeng on 16/6/3.
+ */
+@Service("lockServiceBiz")
+public class LockServiceBiz {
+
+    @Autowired
+    private LockManageMapper lockManageMapper;
+
+    @Autowired
+    private LockOpenRecordMapper lockOpenRecordMapper;
+
+    @Autowired
+    private LockBindMapper lockBindMapper;
+
+    @Autowired
+    private LockPasswordMapper lockPasswordMapper;
+
+    /**
+     * 根据房间ID[公寓ID]获取智能锁信息
+     *
+     * @param apiParams
+     * @return ResultObjectMsg<Map<String, Object>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<Map<String, Object>> searchApiLockInfo(Map<String, Object> apiParams) throws Exception {
+        return new ResultObjectMsg<Map<String, Object>>(lockManageMapper.searchApiLockInfo(apiParams));
+    }
+
+    /**
+     * 插入开锁记录
+     *
+     * @return
+     * @throws Exception
+     */
+    @Transactional
+    public ResultMsg saveApiLockOpenRecord(Map<String, Object> apiParams) throws Exception {
+        try {
+            if (null == apiParams) {
+                return ResultMsg.createErrorMsg("缺少参数.");
+            }
+            if (StringUtil.isNullOrEmpty((String) apiParams.get("operatorId"))) {
+                return ResultMsg.createErrorMsg("缺少操作人ID.");
+            }
+            if (StringUtil.isNullOrEmpty((String) apiParams.get("mobilePhone"))) {
+                return ResultMsg.createErrorMsg("缺少手机号码.");
+            }
+            if (StringUtil.isNullOrEmpty((String) apiParams.get("houseNum"))) {
+                return ResultMsg.createErrorMsg("缺少房源编号.");
+            }
+            LockOpenRecord lockOpenRecord = new LockOpenRecord();
+            lockOpenRecord.setRecord_id(UuidUtil.getUUID());
+            lockOpenRecord.setOperator_id((String) apiParams.get("operatorId"));
+            lockOpenRecord.setMobile_phone((String) apiParams.get("mobilePhone"));
+            lockOpenRecord.setHouse_num((String) apiParams.get("houseNum"));
+            lockOpenRecord.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            lockOpenRecordMapper.insert(lockOpenRecord);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 根据合同ID和合同类型返回锁信息
+     *
+     * @param apiParams
+     * @return ResultObjectMsg<List<Map<String, Object>>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiLockInfoByApartmentContract(Map<String, Object> apiParams) throws Exception {
+        if (null == apiParams) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少参数.");
+        }
+        String rentalType = (String) apiParams.get("rentalType");
+        if (StringUtil.isNullOrEmpty(rentalType)) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少出租类型.");
+        }
+        String contractId = (String) apiParams.get("contractId");
+        if (StringUtil.isNullOrEmpty(contractId)) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少出租合同ID.");
+        }
+
+
+        return new ResultObjectMsg<List<Map<String, Object>>>(lockManageMapper.searchApiLockInfoByApartmentContract(apiParams));
+
+    }
+
+    /**
+     * 根据租客ID合同ID返回租客密码相关信息
+     *
+     * @param apiParams
+     * @return ResultObjectMsg<List<Map<String, Object>>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiCustomerPassword(Map<String, Object> apiParams) throws Exception {
+        return new ResultObjectMsg<List<Map<String, Object>>>("customer_password");
+    }
+
+    /**
+     * 根据品牌公寓IDS[roomIds]返回公寓信息
+     *
+     * @param roomIds
+     * @return ResultObjectMsg<List<Map<String,Object>>>
+     */
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiApartmentByRoomIds(String roomIds) throws Exception {
+        if (StringUtil.isNullOrEmpty(roomIds)) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少参数.");
+        }
+        roomIds = StringUtil.searchParamsByMarks(roomIds, "'");
+        return new ResultObjectMsg<List<Map<String, Object>>>(lockManageMapper.searchApiApartmentByRoomIds(roomIds));
+    }
+
+    /**
+     * 根据房源编号查询锁详情
+     *
+     * @param houseNum
+     * @return ResultObjectMsg<Map<String, Object>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<Map<String, Object>> searchApiLockInfoByHouseNum(String houseNum) throws Exception {
+        if (StringUtil.isNullOrEmpty(houseNum)) {
+            return new ResultObjectMsg<Map<String, Object>>("缺少房源编号.");
+        }
+        return new ResultObjectMsg<Map<String, Object>>(lockManageMapper.searchApiLockInfoByHouseNum(houseNum));
+    }
+
+    /**
+     * 根据锁ID返回锁绑定信息
+     *
+     * @param lockId
+     * @return ResultObjectMsg<Map<String, Object>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<Map<String, Object>> searchApiLockBindByLockId(String lockId) throws Exception {
+        if (StringUtil.isNullOrEmpty(lockId)) {
+            return new ResultObjectMsg<Map<String, Object>>("缺少锁ID.");
+        }
+        return new ResultObjectMsg<Map<String, Object>>(lockBindMapper.searchApiLockBindByLockId(lockId));
+    }
+
+    /**
+     * 保存[APP更新]锁信息
+     *
+     * @param apiParams
+     * @return ResultMsg
+     * @throws Exception
+     */
+    public ResultMsg saveApiLockManage(Map<String, Object> apiParams) throws Exception {
+        try {
+            if (null == apiParams) {
+                return ResultMsg.createErrorMsg("缺少参数.");
+            }
+            if (apiParams.containsKey("lockId") && !StringUtil.isNullOrEmpty((String) apiParams.get("lockId"))) {
+                LockManage lockManage = new LockManage();
+                if (apiParams.containsKey("electric")) {
+                    lockManage.setElectric((String) apiParams.get("electric"));
+                }
+                if (apiParams.containsKey("rssi")) {
+                    lockManage.setRssi((String) apiParams.get("rssi"));
+                }
+                if (apiParams.containsKey("state")) {
+                    lockManage.setState((String) apiParams.get("state"));
+                }
+                // 更新lock_manage
+                lockManage.setManage_id((String) apiParams.get("lockId"));
+                lockManage.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                lockManageMapper.updateByPrimaryKeySelective(lockManage);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 根据租客ID和合同ID查询客户智能锁密码信息
+     *
+     * @param apiParams
+     * @return ResultObjectMsg<Map<String, Object>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiLockPassword(Map<String, Object> apiParams) throws Exception {
+        if (null == apiParams) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少参数.");
+        }
+        if (StringUtil.isNullOrEmpty((String) apiParams.get("cid"))) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少租客ID.");
+        }
+        if (StringUtil.isNullOrEmpty((String) apiParams.get("contractId"))) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少合同ID.");
+        }
+        return new ResultObjectMsg<List<Map<String, Object>>>(lockPasswordMapper.searchApiLockPassword(apiParams));
+    }
+
+    /**
+     * 更新租客密码
+     *
+     * @param apiParams
+     * @return ResultMsg
+     */
+    public ResultMsg saveApiLockPassword(Map<String, Object> apiParams) throws Exception {
+        try {
+            if (null == apiParams) {
+                return ResultMsg.createErrorMsg("缺少参数.");
+            }
+
+            if (apiParams.containsKey("id") && !StringUtil.isNullOrEmpty((String) apiParams.get("id"))) {
+                LockPassword lockPassword = new LockPassword();
+
+                if (apiParams.containsKey("operatorId")) {
+                    lockPassword.setOperator_id(String.valueOf(apiParams.get("operatorId")));
+                }
+                if (apiParams.containsKey("operator")) {
+                    lockPassword.setOperator((String) apiParams.get("operator"));
+                }
+                // 默认租客
+                lockPassword.setOperate_type("CUSTOMER_PERSON");// TODO 字典项
+                if (apiParams.containsKey("operateType")) {
+                    lockPassword.setOperate_type((String) apiParams.get("operateType"));
+                }
+                if (apiParams.containsKey("startDate")) {
+                    lockPassword.setStart_date((String) apiParams.get("startDate"));
+                }
+                if (apiParams.containsKey("endDate")) {
+                    lockPassword.setEnd_date((String) apiParams.get("endDate"));
+                }
+                if (apiParams.containsKey("type")) {
+                    lockPassword.setType((String) apiParams.get("type"));
+                }
+                // 更新密码锁密码
+                lockPassword.setUpdate_uid("00000000000000000000000000000000");
+                lockPassword.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+
+                lockPassword.setPassword_id((String) apiParams.get("id"));
+
+                lockPasswordMapper.updateByPrimaryKeySelective(lockPassword);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+    
+    
+    /**
+     * 根据apartmentId houseId 查询房源绑定锁的信息（丁盯只能针对每把锁进行重置密码）
+     *
+     * @param apiParams
+     * @return ResultObjectMsg<Map<String, Object>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiLockManageByHouseInfo(Map<String, Object> apiParams) throws Exception {
+        if (null == apiParams) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少参数.");
+        }
+        if (StringUtil.isNullOrEmpty((String) apiParams.get("apartmentId"))) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少apartmentId.");
+        }
+        if (StringUtil.isNullOrEmpty((String) apiParams.get("houseId"))) {
+            return new ResultObjectMsg<List<Map<String, Object>>>("缺少houseId.");
+        }
+        return new ResultObjectMsg<List<Map<String, Object>>>(lockManageMapper.searchApiLockManageByHouseInfo(apiParams));
+    }
+
+}
+

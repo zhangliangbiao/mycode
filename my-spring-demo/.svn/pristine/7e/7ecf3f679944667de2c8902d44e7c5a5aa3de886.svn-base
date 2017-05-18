@@ -1,0 +1,72 @@
+package com.isz.erp.house.biz;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.facade.house.entity.ApartmentCount;
+import com.isz.erp.facade.house.entity.ApartmentCountRented;
+import com.isz.erp.facede.bzlog.entity.ApartmentLog;
+import com.isz.erp.house.mapper.ApartmentLogMapper;
+
+/**
+ * 自营公寓业务实现
+ *
+ * @author lws * luwenshan@ishangzu.com
+ * @version 1.0 *
+ * @date 创建时间：2016年1月22日 下午6:18:09
+ * @instruction 说明：
+ */
+@Service("apartmentLogServiceBiz")
+public class ApartmentLogServiceBiz {
+
+    @Autowired
+    private ApartmentLogMapper apartmentLogMapper;
+
+    /**
+     * 查出所有的有效公寓
+     *
+     * @param params
+     * @return
+     */
+    public List<ApartmentLog> searchApartmentListByLog(Map<String, Object> params) {
+        return apartmentLogMapper.searchApartmentListByLog(params);
+    }
+
+    /**
+     * 查出所有的有效公寓的总数
+     *
+     * @return
+     */
+    public Integer searchApartmentListCountByLog(Map<String, Object> params) {
+        return apartmentLogMapper.searchApartmentListCountByLog(params);
+    }
+    
+    /**
+     * 保存统计
+     */
+    public void insertApartmentCount(ApartmentCount apartmentCount){
+    	apartmentLogMapper.insertApartmentCount(apartmentCount);
+    }
+    
+    /**
+     * 查询昨天的
+     * @return
+     */
+    public ApartmentCount selectPreDayApartment(){
+    	return apartmentLogMapper.selectPreDayApartment();
+    }
+    
+    /**
+     * 保存统计
+     */
+    public void insertApartmentCountRented(ApartmentCountRented apartmentCountRented){
+    	apartmentLogMapper.insertApartmentCountRented(apartmentCountRented);
+    }
+    
+    
+    
+
+}

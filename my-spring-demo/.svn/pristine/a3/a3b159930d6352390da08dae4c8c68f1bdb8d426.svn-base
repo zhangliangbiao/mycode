@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.OnlineHouseTagsMapper">
+	<resultMap id="onlineHouseTagsMapper" type="com.isz.erp.facade.house.entity.OnlineHouseTags">
+	    <id column="tag_id" property="tag_id"/>
+	    <result column="info_id" property="info_id"/>
+	    <result column="tag_code" property="tag_code"/>
+	    <result column="create_time" property="create_time"/>
+	    <result column="create_uid" property="create_uid"/>
+	 </resultMap>
+	    
+	  <select id="selectTagDetailListByInfoId" resultType="com.isz.erp.facade.house.entity.OnlineHouseTags"  parameterType="java.lang.String">
+	  		select * from online_house_tags oht where oht.info_id =#{info_id} 
+	  </select>  
+	  
+	   <update id="deleteByInfoId" parameterType="java.lang.String">
+	  		delete from online_house_tags where info_id=#{info_id}
+	  </update>
+	  
+</mapper>

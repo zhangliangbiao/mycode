@@ -1,0 +1,90 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseDevelop;
+
+/**
+ * 开发房源Mapper
+ * 
+ * @author SZP * zhipenglees@gmail.com
+ * @date 创建时间：2016年1月18日 上午11:29:50 *
+ * @version 1.0 *
+ * @instruction 说明：开发房源Mapper
+ */
+public interface HouseDevelopMapper extends Mapper<HouseDevelop> {
+
+	/**
+	 * 开发房源-新增
+	 * 
+	 * @param houseDevelop
+	 */
+	public void insertHouseDevelop(HouseDevelop houseDevelop);
+
+	/**
+	 * 开发房源-返回符合条件的开发房源列表
+	 * 
+	 * @param data
+	 * @return List<HouseDevelop>
+	 */
+	public List<HouseDevelop> searchHouseDevelopList(Map<String, Object> data);
+
+	/**
+	 * 开发房源-返回符合条件的开发房源记录总数
+	 * 
+	 * @param data
+	 * @return Integer
+	 */
+	public Integer countSearchHouseDevelop(Map<String, Object> data);
+
+	/**
+	 * 开发房源-返回开发房源详情
+	 * 
+	 * @param house_develop_id
+	 * @return HouseDevelop
+	 */
+	public HouseDevelop selectByHouseDevelopId(String house_develop_id);
+
+	/**
+	 * 返回已添加过的开发房源
+	 * 
+	 * @param houseDevelop
+	 * @return HouseDevelop
+	 */
+	public HouseDevelop getByHouseDevelop(HouseDevelop houseDevelop);
+	
+	/**
+	 * 根据名字模糊匹配用户ids
+	 * @param string
+	 * @return
+	 */
+	public String searchuidLikeName(String name);
+	
+	/**
+	* @Description: 查询审核意见
+	* @param house_develop_id
+	* @return
+	* @return List<HouseDevelop>
+	* @author luoxiaofei
+	* @date 2016年8月5日 上午10:12:08
+	* @throws
+	 */
+	public List<HouseDevelop> selectByHouseDevelopAudit(String house_develop_id);
+
+	/**
+	 * 查找相同房源
+	 * @param house_develop_id
+	 * @return
+	 */
+	public List<HouseDevelop> selectHouseDevelopSimilarList(String house_develop_id);
+	/**
+	 * 查找相同房源
+	 * @param house_develop_id
+	 * @return
+	 */
+	public int selectHouseDevelopSimilarCount(String house_develop_id);
+	
+	public void updateHouseDevelopSimilar(Map<String,String> map);
+}

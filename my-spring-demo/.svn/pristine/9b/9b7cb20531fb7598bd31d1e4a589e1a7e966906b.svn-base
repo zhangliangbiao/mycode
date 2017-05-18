@@ -1,0 +1,162 @@
+package com.isz.erp.house.biz;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.util.DateUtil;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.common.util.UuidUtil;
+import com.isz.erp.common.util.DictConstants.HouseStatus;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.HouseDevelop;
+import com.isz.erp.facade.house.entity.HouseRent;
+import com.isz.erp.facade.house.entity.HouseRolesChangeHistory;
+import com.isz.erp.facade.house.vo.HouseContractVo;
+import com.isz.erp.facade.user.entity.SysPosition;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.facade.user.service.UserService;
+import com.isz.erp.house.mapper.HouseContractVoMapper;
+import com.isz.erp.house.mapper.HouseRentMapper;
+import com.isz.erp.house.mapper.HouseRolesChangeHistoryMapper;
+import com.isz.erp.house.mapper.ResidentialMapper;
+
+@Service("houseRolesBiz")
+public class HouseRolesBiz {
+	@Autowired
+	private HouseRolesChangeHistoryMapper houseRolesChangeHistoryMapper;
+	@Autowired
+	private HouseRentMapper houseRentMapper;
+	@Autowired
+	private ResidentialMapper residentialMapper;
+	@Autowired
+	private UserService userService;
+	@Autowired
+	private HouseContractVoMapper houseContractVoMapper;
+	
+	/**
+	 * 终止结算的角色变更
+	 * 
+	 * @param contract_id
+	 * @param user
+	 * @return
+	 */
+	public ResultMsg HouseContractEnd(String contract_id, String end_uid) {
+		// House house =houseMapper.selectByPrimaryKey(house_id);
+		ResultObjectMsg<SysUser> resultuser=userService.getSysUserByUserId(end_uid);
+		if(resultuser==null){
+			return ResultMsg.createErrorMsg("结算用户未找到");
+		}
+		SysUser user=resultuser.getObj();
+		if(user==null){
+			return ResultMsg.createErrorMsg("结算用户未找到");
+		}
+		HouseContractVo houseContractVo=houseContractVoMapper.selectByContractId(contract_id);
+		if(houseContractVo==null){
+			return ResultMsg.createErrorMsg("委托合同未找到");
+		}
+		String house_id=houseContractVo.getHouse_id();
+		HouseRent houseRent = houseRentMapper.selectByPrimaryKey(house_id);
+		houseRent.setCultivation_uid(user.getUser_id());// 拓盘人
+		houseRent.setCultivation_time(DateUtil.getCurrentDateTimeAsString());
+		if (HouseStatus.WAITING_RENT.value().equals(houseRent.getHouse_status())) {
+			houseRent.setActivated_uid(user.getUser_id());// 设置当前用户为激活人
+			houseRent.setActivated_time(DateUtil.getCurrentDateTimeAsString());
+
+			String dep_id = residentialMapper.selectSysDepIdByResidentialId(houseRent.getResidential_id());
+			houseRent.setBelong_did(dep_id);// 设置小区归属部门
+			Map<String, String> map = new HashMap<String, String>();
+			map.put("user_id", houseRent.getActivated_uid());
+			map.put("dept_id", houseRent.getBelong_did());
+			if (houseRentMapper.selectSysDepUser(map) > 0) {
+				// 激活人和楼盘在同部门下,
+				Map<String,String> pmap=new HashMap<String,String>();
+				pmap.put("position_id", user.getPosition_id());
+				List<SysPosition> positionList = houseRolesChangeHistoryMapper
+						.selectPositionByAssetManager(pmap);
+				if (positionList.size() > 0) {
+					// 同时激活人岗位为资产管家，则激活人设置为归属人
+					houseRent.setBelong_uid(houseRent.getActivated_uid());
+				}
+			}
+		}
+		houseRentMapper.updateByPrimaryKey(houseRent);
+		// 记录角色历史
+		HouseRolesChangeHistory houseRolesChangeHistory = new HouseRolesChangeHistory();
+		houseRolesChangeHistory.setHistory_id(UuidUtil.getUUID());
+		houseRolesChangeHistory.setHouse_id(house_id);
+		houseRolesChangeHistory.setBelong_uid(houseRent.getBelong_uid());
+		houseRolesChangeHistory.setCultivation_uid(houseRent.getCultivation_uid());
+		houseRolesChangeHistory.setExploration_uid(houseRent.getExploration_uid());
+		houseRolesChangeHistory.setActivated_uid(houseRent.getActivated_uid());
+		houseRolesChangeHistory.setWash_uid(houseRent.getWash_uid());
+		houseRolesChangeHistory.setCreate_uid(user.getUser_id());
+		houseRolesChangeHistory.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+		houseRolesChangeHistoryMapper.insert(houseRolesChangeHistory);
+
+		return ResultMsg.createOkMsg();
+	}
+
+	/**
+	 * 审核资料房源  角色变更
+	 * @param house
+	 * @param houseRent
+	 * @param houseDevelop
+	 * @return
+	 */
+	public ResultMsg HouseDevelopAudit(House house,HouseRent houseRent, HouseDevelop houseDevelop) {
+		houseRent.setCultivation_uid(houseDevelop.getUid());// 拓盘人
+		houseRent.setCultivation_time(houseDevelop.getCreate_time());
+		//houseRent.setBelong_did(houseDevelop.getDid());
+
+		if (HouseStatus.WAITING_RENT.value().equals(houseRent.getHouse_status())) {
+			// houseRent.setCultivation_uid(houseDevelop.getUid());//拓盘人
+			// houseRent.setCultivation_time(houseDevelop.getCreate_time());
+			houseRent.setActivated_uid(houseDevelop.getUid());// 激活人
+			houseRent.setActivated_time(DateUtil.getCurrentDateTimeAsString());
+
+			String dep_id = residentialMapper.selectSysDepIdByResidentialId(houseDevelop.getResidential_id());
+			//System.out.println(dep_id+"............."+houseDevelop.getResidential_id());
+			houseRent.setBelong_did(dep_id);// 设置
+			Map<String, String> map = new HashMap<String, String>();
+			map.put("user_id", houseRent.getActivated_uid());
+			map.put("dept_id", houseRent.getBelong_did());
+			if (houseRentMapper.selectSysDepUser(map) > 0) {
+				// 拓盘用户和楼盘在同部门下,拓盘人设置为归属人
+				SysUser user = houseRolesChangeHistoryMapper.selectUserByUserId(houseRent.getCultivation_uid());
+				if (user != null) {
+					Map<String,String> pmap=new HashMap<String,String>();
+					pmap.put("position_id", user.getPosition_id());
+					List<SysPosition> positionList = houseRolesChangeHistoryMapper
+							.selectPositionByAssetManager(pmap);
+					if (positionList.size() > 0) {
+						// 同时拓盘人岗位为资产管家，则拓盘人设置为归属人
+						houseRent.setBelong_uid(houseRent.getCultivation_uid());
+					}
+				}
+			}
+		}
+		// houseRent.setExploration_uid(exploration_uid);//初勘人
+		// houseRent.setExploration_time(DateUtil.getCurrentDateTimeAsString());
+		houseRent.setWash_uid(house.getCreate_uid());// 最后洗盘人
+
+		// 记录角色
+		HouseRolesChangeHistory houseRolesChangeHistory = new HouseRolesChangeHistory();
+		houseRolesChangeHistory.setHistory_id(UuidUtil.getUUID());
+		houseRolesChangeHistory.setHouse_id(house.getHouse_id());
+		houseRolesChangeHistory.setBelong_uid(houseRent.getBelong_uid());
+		houseRolesChangeHistory.setCultivation_uid(houseRent.getCultivation_uid());
+		houseRolesChangeHistory.setExploration_uid(houseRent.getExploration_uid());
+		houseRolesChangeHistory.setActivated_uid(houseRent.getActivated_uid());
+		houseRolesChangeHistory.setWash_uid(houseRent.getWash_uid());
+		houseRolesChangeHistory.setCreate_uid(house.getCreate_uid());
+		houseRolesChangeHistory.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+		houseRolesChangeHistoryMapper.insert(houseRolesChangeHistory);
+		
+		return ResultMsg.createOkMsg();
+	}
+}

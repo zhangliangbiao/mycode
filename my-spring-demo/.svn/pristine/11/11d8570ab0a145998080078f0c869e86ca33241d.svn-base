@@ -1,0 +1,1144 @@
+package com.isz.erp.house.biz;
+
+import java.util.*;
+
+import com.isz.erp.facade.house.entity.*;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.mapper.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.DateUtil;
+import com.isz.erp.common.util.DicTools;
+import com.isz.erp.common.util.IszLogger;
+import com.isz.erp.common.util.ParameterUtil;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.common.util.StringUtil;
+import com.isz.erp.common.util.UuidUtil;
+import com.isz.erp.facade.house.service.HouseService;
+import com.isz.erp.facade.user.entity.SysUser;
+
+/**
+ * @author WangShuo *
+ * @version 1.0 *
+ * @date 创建时间：2016年1月22日 下午1:00:13 *
+ * @instruction 说明：
+ */
+@Service("residentialBuildingServiceBiz")
+public class ResidentialBuildingServiceBiz {
+
+    @Autowired
+    private ResidentialBuildingMapper residentialBuildingMapper;
+    @Autowired
+    private HouseServiceBiz houseServiceBiz;
+    @Autowired
+    private ResidentialBuildingUnitMapper residentialBuildingUnitMapper;
+    @Autowired
+    private ResidentialBuildingFloorMapper residentialBuildingFloorMapper;
+    @Autowired
+    private HouseMapper houseMapper;
+    @Autowired
+    private ResidentialBuildingHouseNoMapper residentialBuildingHouseNoMapper;
+    @Autowired
+    private ResidentialMapper residentialMapper;
+
+    private static final String resOk = "OK";
+
+    /**
+     * 查询楼栋信息(分页)
+     *
+     * @param pageData
+     * @return
+     */
+    public ResultObjectMsg<PagingHelper<ResidentialBuilding>> searchBuildingList(Map<String, Object> pageData)
+            throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+        PagingHelper<ResidentialBuilding> ph = new PagingHelper<ResidentialBuilding>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+        List<ResidentialBuilding> list = residentialBuildingMapper.searchResidentialBuildingList(pageData);
+        int count = residentialBuildingMapper.countResidentialBuilding(pageData);
+
+        for (ResidentialBuilding residentialBuilding : list) {
+            String suffix = DicTools.getCnValue("Suffix", residentialBuilding.getSuffix());
+            residentialBuilding.setBuilding_name(residentialBuilding.getBuilding_name() + suffix);
+            // 查询单元
+            List<ResidentialBuildingUnit> residentialBuildingUnitList = residentialBuildingUnitMapper
+                    .selectList(residentialBuilding.getBuilding_id());
+            residentialBuilding.setUnit_num(residentialBuildingUnitList.size());
+        }
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<ResidentialBuilding>>(ph);
+    }
+
+    /**
+     * 保存楼栋信息
+     *
+     * @param residentialBuilding
+     * @param user
+     * @return
+     */
+    @Transactional
+    public ResultMsg saveResidentialBuilding(ResidentialBuilding residentialBuilding, SysUser user) throws Exception {
+        try {
+            // 数据验证
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getBuilding_name())) {
+                return ResultMsg.createErrorMsg("请填写栋座名");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getSuffix())) {
+                // return ResultMsg.createErrorMsg("请填写栋座后缀");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getHousing_type())) {
+                return ResultMsg.createErrorMsg("请选择住在类型");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getHave_elevator())) {
+                return ResultMsg.createErrorMsg("请选择是否有电梯");
+            }
+            if (null == residentialBuilding.getGround_floors()) {
+                return ResultMsg.createErrorMsg("请填写地面层数");
+            }
+            Map<String, Object> map = new HashMap<String, Object>();
+            map.put("residential_id", residentialBuilding.getResidential_id());
+            map.put("building_name", residentialBuilding.getBuilding_name());
+            ResidentialBuilding residentialBuildingExists = residentialBuildingMapper.selectByName(map);
+            // 新增 修改
+            if (StringUtil.checkEmptyNull(residentialBuilding.getBuilding_id())) {
+                if (null != residentialBuildingExists) {
+                    return ResultMsg.createErrorMsg("当前栋座已存在.");
+                }
+                Residential residential = residentialMapper.selectByPrimaryKey(residentialBuilding.getResidential_id());
+                if (null == residential) {
+                    return ResultMsg.createErrorMsg("楼盘不存在.");
+                }
+                residentialBuilding.setBuilding_id(UuidUtil.getUUID());
+                residentialBuilding.setCreate_uid(user.getUser_id());
+                residentialBuilding.setUpdate_uid(user.getUser_id());
+                residentialBuilding.setDeleted(0);
+                residentialBuilding.setCity_code(residential.getCity_code());
+                residentialBuilding.setArea_code(residential.getArea_code());
+                residentialBuildingMapper.saveResidentialBuilding(residentialBuilding);
+                // 保存单元
+                List<ResidentialBuildingUnit> residentialBuildingUnitList = residentialBuilding
+                        .getResidentialBuildingUnitList();
+                // 判断单元名称是否重复
+                String res = checkIsRepeat(residentialBuildingUnitList, "单元名");
+                if (!resOk.equals(res)) {
+                    IszLogger.error("单元名存在重复" + res);
+                    throw new Exception(res);
+                }
+                // 根据sort字段排序
+                if (residentialBuildingUnitList != null) {
+                    Collections.sort(residentialBuildingUnitList);
+                    for (int i = 0; i < residentialBuildingUnitList.size(); i++) {
+                        ResidentialBuildingUnit residentialBuildingUnit = residentialBuildingUnitList.get(i);
+                        residentialBuildingUnit.setUnit_id(UuidUtil.getUUID());
+                        residentialBuildingUnit.setBuilding_id(residentialBuilding.getBuilding_id());
+                        residentialBuildingUnit.setCreate_uid(user.getUser_id());
+                        residentialBuildingUnit.setUpdate_uid(user.getUser_id());
+                        residentialBuildingUnit.setCity_code(residential.getCity_code());
+                        residentialBuildingUnit.setArea_code(residential.getArea_code());
+                    }
+                    residentialBuildingUnitMapper.saveUnitBatch(residentialBuildingUnitList);
+                }
+                // 保存楼层
+                List<ResidentialBuildingFloor> residentialBuildingFloorList = residentialBuilding
+                        .getResidentialBuildingFloorList();
+                // 判断楼层名称是否重复
+                res = checkIsRepeatFloor(residentialBuildingFloorList, "楼层名");
+                if (!resOk.equals(res)) {
+                    IszLogger.error("楼层名存在重复" + res);
+                    throw new Exception(res);
+                }
+                // 根据sort字段排序
+                if (residentialBuildingFloorList != null) {
+                    Collections.sort(residentialBuildingFloorList);
+                    for (int i = 0; i < residentialBuildingFloorList.size(); i++) {
+                        ResidentialBuildingFloor residentialBuildingFloor = residentialBuildingFloorList.get(i);
+                        residentialBuildingFloor.setFloor_id(UuidUtil.getUUID());
+                        residentialBuildingFloor.setBuilding_id(residentialBuilding.getBuilding_id());
+                        residentialBuildingFloor.setCreate_uid(user.getUser_id());
+                        residentialBuildingFloor.setUpdate_uid(user.getUser_id());
+                        residentialBuildingFloor.setCity_code(residential.getCity_code());
+                        residentialBuildingFloor.setArea_code(residential.getArea_code());
+                    }
+                    residentialBuildingFloorMapper.saveFloorBatch(residentialBuildingFloorList);
+                }
+            } else {
+                ResidentialBuilding residentialBuildingOld = residentialBuildingMapper
+                        .selectByPrimaryKey(residentialBuilding.getBuilding_id());
+                if (residentialBuildingOld == null) {
+                    return ResultMsg.createErrorMsg("该楼栋不存在");
+                }
+                if (null != residentialBuildingExists && !residentialBuildingExists.getBuilding_id().equals(residentialBuildingOld.getBuilding_id())) {
+                    return ResultMsg.createErrorMsg("当前栋座已存在.");
+                }
+                if (!residentialBuildingOld.getUpdate_time().equals(residentialBuilding.getUpdate_time())) {
+                    return ResultMsg.createErrorMsg("该楼栋已经被其他用户更新，请返回重新编辑");
+                }
+
+                List<ResidentialBuildingUnit> residentialBuildingUnitList = residentialBuilding
+                        .getResidentialBuildingUnitList();
+                // 判断单元名称是否重复
+                if (null != residentialBuildingUnitList && residentialBuildingUnitList.size() > 0) {
+                    String res = checkIsRepeat(residentialBuildingUnitList, "单元名");
+                    if (!resOk.equals(res)) {
+                        IszLogger.error("单元名存在重复" + res);
+                        return ResultMsg.createErrorMsg(res);
+                    }
+                }
+
+                List<ResidentialBuildingFloor> residentialBuildingFloorList = residentialBuilding
+                        .getResidentialBuildingFloorList();
+                // 判断楼层名称是否重复
+                if (null != residentialBuildingFloorList && residentialBuildingFloorList.size() > 0) {
+                    String res = checkIsRepeatFloor(residentialBuildingFloorList, "楼层名");
+                    if (!resOk.equals(res)) {
+                        IszLogger.error("楼层名存在重复" + res);
+                        return ResultMsg.createErrorMsg(res);
+                    }
+                }
+
+                residentialBuilding.setUpdate_uid(user.getUser_id());
+                residentialBuilding.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingMapper.updateResidentialBuilding(residentialBuilding);
+
+                // 更新单元
+                // 根据sort字段排序 循环更新
+                if (residentialBuildingUnitList != null) {
+                    Collections.sort(residentialBuildingUnitList);
+                    for (ResidentialBuildingUnit residentialBuildingUnit : residentialBuildingUnitList) {
+                        if (!StringUtil.isNullOrEmpty(residentialBuildingUnit.getUnit_id())) {
+                            ResidentialBuildingUnit residentialBuildingUnitOld = residentialBuildingUnitMapper.selectByPrimaryKey(residentialBuildingUnit.getUnit_id());
+                            if (null != residentialBuildingUnitOld) {
+                                if (!residentialBuildingUnitOld.getUnit_name().equals(residentialBuildingUnit.getUnit_name())) {
+                                    Map<String, Object> paramsMap = new HashMap<String, Object>();
+                                    paramsMap.put("residential_id", residentialBuildingOld.getResidential_id());
+                                    paramsMap.put("building_id", residentialBuildingOld.getBuilding_id());
+                                    paramsMap.put("unit_name", residentialBuildingUnit.getUnit_name());
+                                    Integer res = houseMapper.isUse4Residential(paramsMap);
+                                    if (null != res && res > 0) {
+                                        throw new RuntimeException("出租房源已经使用,单元:" + residentialBuildingUnitOld.getUnit_name() + "不能修改为" + residentialBuildingUnit.getUnit_name());
+                                    }
+                                }
+                                residentialBuildingUnit.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                                residentialBuildingUnit.setUpdate_uid(user.getUser_id());
+                                residentialBuildingUnitMapper.updateByPrimaryKeySelective(residentialBuildingUnit);
+                            }
+                        }
+                    }
+                }
+                if (!StringUtil.isNullOrEmpty(residentialBuilding.getUnit_id_delete())) {
+                    String unitIds = StringUtil.searchParamsByMarks(residentialBuilding.getUnit_id_delete(), "'");
+                    // 删除房号
+                    residentialBuildingHouseNoMapper.deleteByUnitIds(unitIds);
+                    // 删除楼层
+                    residentialBuildingFloorMapper.deleteByUnitIds(unitIds);
+                    // 删除单元
+                    residentialBuildingUnitMapper.deleteUnitByUnitIds(unitIds);
+                }
+
+                // 更新楼层
+                // 根据sort字段排序 循环更新
+                if (residentialBuildingFloorList != null) {
+                    Collections.sort(residentialBuildingFloorList);
+                    for (ResidentialBuildingFloor residentialBuildingFloor : residentialBuildingFloorList) {
+                        if (!StringUtil.isNullOrEmpty(residentialBuildingFloor.getFloor_id())) {
+                            ResidentialBuildingFloor residentialBuildingFloorOld = residentialBuildingFloorMapper.selectByPrimaryKey(residentialBuildingFloor.getFloor_id());
+                            if (null != residentialBuildingFloorOld) {
+                                if (!residentialBuildingFloorOld.getFloor_name().equals(residentialBuildingFloor.getFloor_name())) {
+                                    Map<String, Object> paramsMap = new HashMap<String, Object>();
+                                    paramsMap.put("residential_id", residentialBuildingOld.getResidential_id());
+                                    paramsMap.put("building_id", residentialBuildingOld.getBuilding_id());
+                                    paramsMap.put("unit_name", residentialBuildingFloorOld.getUnit_name());
+                                    paramsMap.put("floor_name", residentialBuildingFloorOld.getFloor_name());
+                                    Integer res = houseMapper.isUse4Residential(paramsMap);
+                                    if (null != res && res > 0) {
+                                        throw new RuntimeException("出租房源已经使用,单元:" + (null == residentialBuildingFloorOld.getUnit_name() ? "" : residentialBuildingFloorOld.getUnit_name()) + " 楼层:" + residentialBuildingFloorOld.getFloor_name() + "不能修改为" + residentialBuildingFloor.getFloor_name());
+                                    }
+                                    residentialBuildingFloor.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                                    residentialBuildingFloor.setUpdate_uid(user.getUser_id());
+                                    residentialBuildingFloorMapper.updateByPrimaryKeySelective(residentialBuildingFloor);
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!StringUtil.isNullOrEmpty(residentialBuilding.getFloor_id_delete())) {
+                    String floorIds = StringUtil.searchParamsByMarks(residentialBuilding.getFloor_id_delete(), "'");
+                    // 删除房号
+                    residentialBuildingHouseNoMapper.deleteByFloorIds(floorIds);
+                    // 删除楼层
+                    residentialBuildingFloorMapper.deleteFloorByFloorIds(floorIds);
+                }
+                // 房号关联保持不变
+            }
+            return ResultMsg.createOkMsg("保存楼栋信息成功");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @param residentialBuildingUnitList
+     * @param name
+     * @return
+     */
+
+    public String checkIsRepeat(List<ResidentialBuildingUnit> residentialBuildingUnitList, String name) {
+        String res = resOk;
+        for (int i = 0; residentialBuildingUnitList != null && i < residentialBuildingUnitList.size() - 1; i++) {
+            ResidentialBuildingUnit residentialBuildingUnitTemp = residentialBuildingUnitList.get(i);
+            String unit_name_temp = residentialBuildingUnitTemp.getUnit_name();
+            for (int j = i + 1; j < residentialBuildingUnitList.size(); j++) {
+                ResidentialBuildingUnit residentialBuildingUnit = residentialBuildingUnitList.get(j);
+                if (unit_name_temp != null && unit_name_temp.equals(residentialBuildingUnit.getUnit_name())) {
+                    res = name + "第" + (i + 1) + "个跟第" + (j + 1) + "个重复，重复的" + name + "是：" + unit_name_temp;
+                }
+            }
+        }
+        return res;
+    }
+
+    public String checkIsRepeatFloor(List<ResidentialBuildingFloor> residentialBuildingFloorList, String name) {
+        String res = resOk;
+        for (int i = 0; residentialBuildingFloorList != null && i < residentialBuildingFloorList.size() - 1; i++) {
+            ResidentialBuildingFloor residentialBuildingFloorTemp = residentialBuildingFloorList.get(i);
+            String floor_name_temp = residentialBuildingFloorTemp.getFloor_name();
+            String unit_id_temp = residentialBuildingFloorTemp.getUnit_id();
+            for (int j = i + 1; j < residentialBuildingFloorList.size(); j++) {
+                ResidentialBuildingFloor residentialBuildingFloor = residentialBuildingFloorList.get(j);
+                if (!StringUtil.isNullOrEmpty(unit_id_temp)
+                        && !StringUtil.isNullOrEmpty(residentialBuildingFloor.getUnit_id())
+                        && unit_id_temp.equals(residentialBuildingFloor.getUnit_id()) && floor_name_temp != null
+                        && floor_name_temp.equals(residentialBuildingFloor.getFloor_name())) {
+                    res = name + "第" + (i + 1) + "个跟第" + (j + 1) + "个重复，重复的" + name + "是：" + floor_name_temp;
+                }
+
+                if (StringUtil.isNullOrEmpty(unit_id_temp)
+                        && StringUtil.isNullOrEmpty(residentialBuildingFloor.getUnit_id()) && floor_name_temp != null
+                        && floor_name_temp.equals(residentialBuildingFloor.getFloor_name())) {
+                    res = name + "第" + (i + 1) + "个跟第" + (j + 1) + "个重复，重复的" + name + "是：" + floor_name_temp;
+                }
+            }
+        }
+        return res;
+    }
+
+    /**
+     * 删除栋座信息
+     *
+     * @param building_id
+     * @return
+     */
+    @Transactional
+    public ResultMsg deleteResidentialBuilding4Update(String building_id, SysUser user) throws Exception {
+        try {
+            // 1.判断出租房源是否有栋座
+            Map<String, Object> map = new HashMap<String, Object>();
+            map.put("building_id", building_id);
+            map.put("update_uid", user.getUser_id());
+            ResultObjectMsg<Integer> res = houseServiceBiz.checkIsUseRedidential(map);
+            IszLogger.require((null != res && null != (Integer) res.getObj() && (Integer) res.getObj() == 0),
+                    "已有出租房源应用该栋座");
+
+            // 以下sql操作顺序不可更改
+            // 1 删除房号
+            residentialBuildingMapper.deleteResidentialBuildingHouseNo(map);
+            // 2 删除层
+            residentialBuildingMapper.deleteResidentialBuildingFloor(map);
+            // 3 删除单元
+            residentialBuildingMapper.deleteResidentialBuildingUnit(map);
+            // 执行软删除
+            residentialBuildingMapper.deleteResidentialBuilding4Update(map);
+
+            return ResultMsg.createOkMsg("删除楼栋信息成功");
+        } catch (NumberFormatException e) {
+            throw new RuntimeException();
+        }
+    }
+
+    /**
+     * 查询楼栋详情
+     *
+     * @param building_id
+     * @return
+     */
+    public ResultObjectMsg<ResidentialBuilding> selectResidentialBuildingDetail(String building_id) throws Exception {
+        ResidentialBuilding residentialBuilding = residentialBuildingMapper
+                .selectResidentialBuildingDetail(building_id);
+        residentialBuilding.setBusinessCircleList(residentialBuilding.getBusinessCircleList());
+
+        // 查询单元list
+        List<ResidentialBuildingUnit> residentialBuildingUnitList = residentialBuildingUnitMapper
+                .selectList(building_id);
+        residentialBuilding.setResidentialBuildingUnitList(residentialBuildingUnitList);
+
+        // 查询楼栋list
+        List<ResidentialBuildingFloor> residentialBuildingFloorList = residentialBuildingFloorMapper
+                .selectList(building_id);
+        residentialBuilding.setResidentialBuildingFloorList(residentialBuildingFloorList);
+
+        return new ResultObjectMsg<ResidentialBuilding>(residentialBuilding);
+    }
+
+    /**
+     * 查询栋座信息4出租房源(分页)
+     *
+     * @param pageData
+     * @return
+     */
+    public ResultObjectMsg<PagingHelper<ResidentialBuilding>> searchBuildingList4House(Map<String, Object> pageData)
+            throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+        PagingHelper<ResidentialBuilding> ph = new PagingHelper<ResidentialBuilding>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<String> paraList = new ArrayList<String>();
+        paraList.add("value");
+        pageData = StringUtil.readAndWritePageData(pageData, paraList);
+
+        List<ResidentialBuilding> list = residentialBuildingMapper.searchResidentialBuildingList4House(pageData);
+        int count = residentialBuildingMapper.countResidentialBuilding4House(pageData);
+        for (ResidentialBuilding residentialBuilding : list) {
+            residentialBuilding.setBusinessCircleList(residentialBuilding.getBusinessCircleList());
+        }
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<ResidentialBuilding>>(ph);
+    }
+
+    /**
+     * 判断单元或者层是否被使用
+     *
+     * @param map
+     * @return
+     * @throws Exception
+     */
+    public ResultMsg isUse4Residential(Map<String, Object> map) throws Exception {
+        Integer res = houseMapper.isUse4Residential(map);
+        if (res > 0) {
+            return ResultMsg.createOkMsg("1");
+        } else {
+            return ResultMsg.createOkMsg("0");
+        }
+    }
+
+    /**
+     * 栋座单元下拉列表
+     *
+     * @param pageData
+     * @return ResultObjectMsg<PagingHelper<Map<String, Object>>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<PagingHelper<Map<String, Object>>> searchResidentialBuildingListForSelect(
+            Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+        if (null != sessionVo) {
+            SysUser sysUser = sessionVo.getSysUser();
+            if (null != sysUser) {
+                pageData.put("user_dep_id", sysUser.getDep_id());
+            }
+        }
+
+        PagingHelper<Map<String, Object>> ph = new PagingHelper<Map<String, Object>>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<Map<String, Object>> list = residentialBuildingMapper.searchResidentialBuildingListForSelect(pageData);
+        if (null != list && list.size() > 0) {
+            for (Map<String, Object> buildingUnit : list) {
+                if (null != buildingUnit) {
+                    List<Map<String, Object>> residentialBuildingFloorList = residentialBuildingFloorMapper
+                            .selectListByMap(buildingUnit);
+                    buildingUnit.put("residentialBuildingFloorList", residentialBuildingFloorList);
+                }
+            }
+        }
+        Integer count = residentialBuildingMapper.countSearchResidentialBuildingForSelect(pageData);
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<Map<String, Object>>>(ph);
+    }
+
+    /**
+     * 房号下拉列表
+     *
+     * @param pageData
+     * @return ResultObjectMsg<PagingHelper<Map<String, Object>>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<PagingHelper<Map<String, Object>>> searchResidentialBuildingHouseNoListForSelect(
+            Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        PagingHelper<Map<String, Object>> ph = new PagingHelper<Map<String, Object>>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<Map<String, Object>> list = residentialBuildingMapper
+                .searchResidentialBuildingHouseNoListForSelect(pageData);
+        Integer count = residentialBuildingMapper.countSearchResidentialBuildingHouseNoForSelect(pageData);
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<Map<String, Object>>>(ph);
+    }
+
+    /**
+     * 保存栋座信息
+     *
+     * @param residentialBuilding
+     * @param sysUser
+     * @return ResultMsg
+     * @throws Exception
+     */
+    @Transactional
+    public ResultMsg saveResidentialBuildingNew(ResidentialBuilding residentialBuilding, SysUser sysUser) throws Exception {
+        try {
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getBuilding_name())) {
+                return ResultMsg.createErrorMsg("缺少栋座名称.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getHousing_type())) {
+                return ResultMsg.createErrorMsg("缺少物业用途.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getHave_elevator())) {
+                return ResultMsg.createErrorMsg("没有选择有无电梯.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getResidential_id())) {
+                return ResultMsg.createErrorMsg("缺少楼盘ID.");
+            }
+            // 新增
+            if (StringUtil.isNullOrEmpty(residentialBuilding.getBuilding_id())) {
+                Residential residential = residentialMapper.selectByPrimaryKey(residentialBuilding.getResidential_id());
+                if (null == residential) {
+                    return ResultMsg.createErrorMsg("楼盘不存在.");
+                }
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("residential_id", residential.getResidential_id());
+                params.put("building_name", residentialBuilding.getBuilding_name().trim());
+                ResidentialBuilding residentialBuildingRes = residentialBuildingMapper.selectByName(params);
+                if (null != residentialBuildingRes) {
+                    return ResultMsg.createErrorMsg("栋座已经存在.");
+                }
+                residentialBuilding.setBuilding_id(UuidUtil.getUUID());
+                residentialBuilding.setCity_code(residential.getCity_code());
+                residentialBuilding.setArea_code(residential.getArea_code());
+                residentialBuilding.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuilding.setCreate_uid(sysUser.getUser_id());
+                residentialBuilding.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuilding.setUpdate_uid(sysUser.getUser_id());
+                residentialBuilding.setDeleted(0);
+                residentialBuildingMapper.saveResidentialBuilding(residentialBuilding);
+            } else {
+                // 编辑
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("residential_id", residentialBuilding.getResidential_id());
+                params.put("building_name", residentialBuilding.getBuilding_name().trim());
+                ResidentialBuilding residentialBuildingRes = residentialBuildingMapper.selectByName(params);
+                if (null != residentialBuildingRes && !residentialBuildingRes.getBuilding_id().equals(residentialBuilding.getBuilding_id())) {
+                    return ResultMsg.createErrorMsg("栋座已经存在.");
+                }
+                ResidentialBuilding residentialBuildingOld = residentialBuildingMapper.selectByPrimaryKey(residentialBuilding.getBuilding_id());
+                if (null != residentialBuildingOld && !residentialBuildingOld.getUpdate_time().equals(residentialBuilding.getUpdate_time())) {
+                    return ResultMsg.createErrorMsg("数据已经被其他用户更新，请返回重新编辑");
+                }
+                // 如果名称有更新,同步到房源中的物业地址
+                if (!residentialBuildingOld.getBuilding_name().equals(residentialBuilding.getBuilding_name())) {
+                    Map<String, Object> paramsMap = new HashMap<String, Object>();
+                    paramsMap.put("residential_id", residentialBuildingOld.getResidential_id());
+                    paramsMap.put("building_id", residentialBuildingOld.getBuilding_id());
+                    List<House> houseList = houseMapper.selectListByMap(paramsMap);
+                    if (null != houseList && houseList.size() > 0) {
+                        Residential residential = residentialMapper.selectByPrimaryKey(residentialBuildingOld.getResidential_id());
+                        if (null == residential) {
+                            return ResultMsg.createErrorMsg("楼盘不存在.");
+                        }
+                        for (House houseOld : houseList) {
+                            if (!StringUtil.isNullOrEmpty(houseOld.getHouse_id())) {
+                                House house = new House();
+                                house.setHouse_id(houseOld.getHouse_id());
+                                house.setProperty_name(residential.getResidential_name() + residentialBuilding.getBuilding_name() + ("无".equals(houseOld.getUnit()) ? "" : houseOld.getUnit()) + houseOld.getHouse_no() + "室");
+                                house.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                                house.setUpdate_uid(sysUser.getUser_id());
+                                houseMapper.updateByPrimaryKeySelective(house);
+                                houseServiceBiz.saveFollow(house, "【同步物业地址:" + houseOld.getProperty_name() + "=>" + house.getProperty_name() + "】");
+                            }
+                        }
+                    }
+                }
+                residentialBuilding.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuilding.setUpdate_uid(sysUser.getUser_id());
+                residentialBuildingMapper.updateResidentialBuilding(residentialBuilding);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 栋座详情
+     *
+     * @param building_id
+     * @return ResultObjectMsg<ResidentialBuilding>
+     */
+    public ResultObjectMsg<ResidentialBuilding> selectResidentialBuildingDetailNew(String building_id) throws Exception {
+        return new ResultObjectMsg<ResidentialBuilding>(residentialBuildingMapper.selectByPrimaryKey(building_id));
+    }
+
+    /**
+     * 单元列表
+     *
+     * @param pageData
+     * @return ResultObjectMsg<PagingHelper<ResidentialBuildingUnit>>
+     */
+    public ResultObjectMsg<PagingHelper<ResidentialBuildingUnit>> searchBuildingUnitList(Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        PagingHelper<ResidentialBuildingUnit> ph = new PagingHelper<ResidentialBuildingUnit>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<ResidentialBuildingUnit> list = residentialBuildingUnitMapper.searchBuildingUnitList(pageData);
+        Integer count = residentialBuildingUnitMapper.countSearchBuildingUnit(pageData);
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<ResidentialBuildingUnit>>(ph);
+    }
+
+    /**
+     * 删除单元
+     *
+     * @param unit_id
+     * @param sysUser
+     * @returnResultMsg
+     */
+    @Transactional
+    public ResultMsg deleteResidentialBuildingUnit(String unit_id, SysUser sysUser) throws Exception {
+        try {
+            ResidentialBuildingUnit residentialBuildingUnit = residentialBuildingUnitMapper.selectByPrimaryKey(unit_id);
+            if (null == residentialBuildingUnit) {
+                return ResultMsg.createErrorMsg("单元不存在.");
+            }
+            ResidentialBuilding residentialBuilding = residentialBuildingMapper.selectByPrimaryKey(residentialBuildingUnit.getBuilding_id());
+            if (null == residentialBuilding) {
+                return ResultMsg.createErrorMsg("栋座不存在.");
+            }
+            Map<String, Object> paramsMap = new HashMap<String, Object>();
+            paramsMap.put("residential_id", residentialBuilding.getResidential_id());
+            paramsMap.put("building_id", residentialBuilding.getBuilding_id());
+            paramsMap.put("unit_name", residentialBuildingUnit.getUnit_name());
+            Integer res = houseMapper.isUse4Residential(paramsMap);
+            if (null != res && res > 0) {
+                return ResultMsg.createErrorMsg("已存在房源,不能删除.");
+            }
+            String unit_ids = StringUtil.searchParamsByMarks(unit_id, "'");
+            residentialBuildingHouseNoMapper.deleteByUnitIds(unit_ids);
+            residentialBuildingFloorMapper.deleteByUnitIds(unit_ids);
+            residentialBuildingUnitMapper.deleteByPrimaryKey(unit_id);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 保存单元
+     *
+     * @param residentialBuildingUnit
+     * @param sysUser
+     * @return
+     * @throws Exception
+     */
+    @Transactional
+    public ResultMsg saveResidentialBuildingUnit(ResidentialBuildingUnit residentialBuildingUnit, SysUser sysUser) throws Exception {
+        try {
+            if (StringUtil.isNullOrEmpty(residentialBuildingUnit.getUnit_name())) {
+                return ResultMsg.createErrorMsg("缺少单元名称.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuildingUnit.getBuilding_id())) {
+                return ResultMsg.createErrorMsg("缺少栋座ID.");
+            }
+            // 新增
+            if (StringUtil.isNullOrEmpty(residentialBuildingUnit.getUnit_id())) {
+                ResidentialBuilding residentialBuilding = residentialBuildingMapper.selectByPrimaryKey(residentialBuildingUnit.getBuilding_id());
+                if (null == residentialBuilding) {
+                    return ResultMsg.createErrorMsg("栋座不存在.");
+                }
+                Residential residential = residentialMapper.selectByPrimaryKey(residentialBuilding.getResidential_id());
+                if (null == residentialBuilding) {
+                    return ResultMsg.createErrorMsg("楼盘不存在.");
+                }
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("building_id", residentialBuilding.getBuilding_id());
+                params.put("unit_name", residentialBuildingUnit.getUnit_name());
+                ResidentialBuildingUnit residentialBuildingUnitRes = residentialBuildingUnitMapper.selectByName(params);
+                if (null != residentialBuildingUnitRes) {
+                    return ResultMsg.createErrorMsg("单元已经存在.");
+                }
+                residentialBuildingUnit.setUnit_id(UuidUtil.getUUID());
+                residentialBuildingUnit.setSort(0);
+                residentialBuildingUnit.setCity_code(residential.getCity_code());
+                residentialBuildingUnit.setArea_code(residential.getArea_code());
+                residentialBuildingUnit.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingUnit.setCreate_uid(sysUser.getUser_id());
+                residentialBuildingUnit.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingUnit.setUpdate_uid(sysUser.getUser_id());
+                residentialBuildingUnitMapper.insert(residentialBuildingUnit);
+            } else {
+                // 编辑
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("building_id", residentialBuildingUnit.getBuilding_id());
+                params.put("unit_name", residentialBuildingUnit.getUnit_name().trim());
+                ResidentialBuildingUnit residentialBuildingUnitRes = residentialBuildingUnitMapper.selectByName(params);
+                if (null != residentialBuildingUnitRes && !residentialBuildingUnitRes.getUnit_id().equals(residentialBuildingUnit.getUnit_id())) {
+                    return ResultMsg.createErrorMsg("单元已经存在.");
+                }
+                ResidentialBuildingUnit residentialBuildingUnitOld = residentialBuildingUnitMapper.selectByPrimaryKey(residentialBuildingUnit.getUnit_id());
+                if (null != residentialBuildingUnitOld && !residentialBuildingUnitOld.getUpdate_time().equals(residentialBuildingUnit.getUpdate_time())) {
+                    return ResultMsg.createErrorMsg("数据已经被其他用户更新，请返回重新编辑");
+                }
+                // 如果名称有更新,同步到房源中的物业地址[无单元不能修改为其他单元,不能再添加单元]
+                if (!residentialBuildingUnitOld.getUnit_name().equals(residentialBuildingUnit.getUnit_name())) {
+                    ResidentialBuilding residentialBuilding = residentialBuildingMapper.selectByPrimaryKey(residentialBuildingUnitOld.getBuilding_id());
+                    if (null == residentialBuilding) {
+                        return ResultMsg.createErrorMsg("栋座不存在");
+                    }
+                    Map<String, Object> paramsMap = new HashMap<String, Object>();
+                    paramsMap.put("residential_id", residentialBuilding.getResidential_id());
+                    paramsMap.put("building_id", residentialBuilding.getBuilding_id());
+                    paramsMap.put("unit_name", residentialBuildingUnitOld.getUnit_name());
+                    List<House> houseList = houseMapper.selectListByMap(paramsMap);
+                    if (null != houseList && houseList.size() > 0) {
+                        Residential residential = residentialMapper.selectByPrimaryKey(residentialBuilding.getResidential_id());
+                        if (null == residential) {
+                            return ResultMsg.createErrorMsg("楼盘不存在.");
+                        }
+                        for (House houseOld : houseList) {
+                            if (!StringUtil.isNullOrEmpty(houseOld.getHouse_id())) {
+                                House house = new House();
+                                house.setHouse_id(houseOld.getHouse_id());
+                                house.setUnit(residentialBuildingUnit.getUnit_name());
+                                house.setUnit_id(residentialBuildingUnit.getUnit_id());
+                                house.setProperty_name(residential.getResidential_name() + residentialBuilding.getBuilding_name() + ("无".equals(residentialBuildingUnit.getUnit_name()) ? "" : residentialBuildingUnit.getUnit_name()) + houseOld.getHouse_no() + "室");
+                                house.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                                house.setUpdate_uid(sysUser.getUser_id());
+                                houseMapper.updateByPrimaryKeySelective(house);
+                                houseServiceBiz.saveFollow(house, "【同步单元:" + houseOld.getUnit() + "=>" + house.getUnit() + "】" + "【同步物业地址:" + houseOld.getProperty_name() + "=>" + house.getProperty_name() + "】");
+                            }
+                        }
+                    }
+                }
+                residentialBuildingUnit.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingUnit.setUpdate_uid(sysUser.getUser_id());
+                residentialBuildingUnitMapper.updateByPrimaryKeySelective(residentialBuildingUnit);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 单元信息
+     *
+     * @param unit_id
+     * @return ResultObjectMsg<ResidentialBuildingUnit>
+     * @throws Exception
+     */
+    public ResultObjectMsg<ResidentialBuildingUnit> selectResidentialBuildingUnitDetail(String unit_id) throws Exception {
+        return new ResultObjectMsg<ResidentialBuildingUnit>(residentialBuildingUnitMapper.selectByPrimaryKey(unit_id));
+    }
+
+    /**
+     * 楼层列表
+     *
+     * @param pageData
+     * @return ResultObjectMsg<PagingHelper<ResidentialBuildingFloor>>
+     */
+    public ResultObjectMsg<PagingHelper<ResidentialBuildingFloor>> searchBuildingFloorList(Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        PagingHelper<ResidentialBuildingFloor> ph = new PagingHelper<ResidentialBuildingFloor>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<ResidentialBuildingFloor> list = residentialBuildingFloorMapper.searchBuildingFloorList(pageData);
+        Integer count = residentialBuildingFloorMapper.countSearchBuildingFloor(pageData);
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<ResidentialBuildingFloor>>(ph);
+    }
+
+    /**
+     * 删除楼层
+     *
+     * @param floor_id
+     * @param sysUser
+     * @return ResultMsg
+     * @throws Exception
+     */
+    @Transactional
+    public ResultMsg deleteResidentialBuildingFloor(String floor_id, SysUser sysUser) throws Exception {
+        try {
+            ResidentialBuildingFloor residentialBuildingFloor = residentialBuildingFloorMapper.selectByPrimaryKey(floor_id);
+            if (null == residentialBuildingFloor) {
+                return ResultMsg.createErrorMsg("楼层不存在.");
+            }
+            ResidentialBuilding residentialBuilding = residentialBuildingMapper.selectByPrimaryKey(residentialBuildingFloor.getBuilding_id());
+            if (null == residentialBuilding) {
+                return ResultMsg.createErrorMsg("栋座不存在.");
+            }
+            ResidentialBuildingUnit residentialBuildingUnit = residentialBuildingUnitMapper.selectByPrimaryKey(residentialBuildingFloor.getUnit_id());
+            if (null == residentialBuildingUnit) {
+                return ResultMsg.createErrorMsg("单元不存在.");
+            }
+            Map<String, Object> paramsMap = new HashMap<String, Object>();
+            paramsMap.put("residential_id", residentialBuilding.getResidential_id());
+            paramsMap.put("building_id", residentialBuilding.getBuilding_id());
+            paramsMap.put("unit_name", residentialBuildingUnit.getUnit_name());
+            paramsMap.put("floor_name", residentialBuildingFloor.getFloor_name());
+            Integer res = houseMapper.isUse4Residential(paramsMap);
+            if (null != res && res > 0) {
+                return ResultMsg.createErrorMsg("已存在房源，不允许删除.");
+            }
+            String floor_ids = StringUtil.searchParamsByMarks(floor_id, "'");
+            residentialBuildingHouseNoMapper.deleteByFloorIds(floor_ids);
+            residentialBuildingFloorMapper.deleteByPrimaryKey(floor_id);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 保存楼层
+     *
+     * @param residentialBuildingFloor
+     * @param sysUser
+     * @return ResultMsg
+     * @throws Exception
+     */
+    @Transactional
+    public ResultMsg saveResidentialBuildingFloor(ResidentialBuildingFloor residentialBuildingFloor, SysUser sysUser) throws Exception {
+        try {
+            if (StringUtil.isNullOrEmpty(residentialBuildingFloor.getFloor_name())) {
+                return ResultMsg.createErrorMsg("缺少楼层名称.");
+            }
+            if(residentialBuildingFloor.getFloor_name().trim().startsWith("0")) {
+                return ResultMsg.createErrorMsg("楼层名称不能以0开头.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuildingFloor.getBuilding_id())) {
+                return ResultMsg.createErrorMsg("缺少栋座ID.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuildingFloor.getUnit_id())) {
+                return ResultMsg.createErrorMsg("缺少单元ID.");
+            }
+            // 新增
+            if (StringUtil.isNullOrEmpty(residentialBuildingFloor.getFloor_id())) {
+                ResidentialBuildingUnit residentialBuildingUnit = residentialBuildingUnitMapper.selectByPrimaryKey(residentialBuildingFloor.getUnit_id());
+                if (null == residentialBuildingUnit) {
+                    return ResultMsg.createErrorMsg("单元不存在.");
+                }
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("building_id", residentialBuildingUnit.getBuilding_id());
+                params.put("unit_id", residentialBuildingUnit.getUnit_id());
+                params.put("floor_name", residentialBuildingFloor.getFloor_name().trim());
+                ResidentialBuildingFloor residentialBuildingFloorRes = residentialBuildingFloorMapper.selectByMap(params);
+                if (null != residentialBuildingFloorRes) {
+                    return ResultMsg.createErrorMsg("楼层已经存在.");
+                }
+                residentialBuildingFloor.setFloor_id(UuidUtil.getUUID());
+                residentialBuildingFloor.setSort(0);
+                residentialBuildingFloor.setCity_code(residentialBuildingUnit.getCity_code());
+                residentialBuildingFloor.setArea_code(residentialBuildingUnit.getArea_code());
+                residentialBuildingFloor.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingFloor.setCreate_uid(sysUser.getUser_id());
+                residentialBuildingFloor.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingFloor.setUpdate_uid(sysUser.getUser_id());
+                residentialBuildingFloorMapper.insert(residentialBuildingFloor);
+            } else {
+                // 编辑
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("building_id", residentialBuildingFloor.getBuilding_id());
+                params.put("unit_id", residentialBuildingFloor.getUnit_id());
+                params.put("floor_name", residentialBuildingFloor.getFloor_name().trim());
+                ResidentialBuildingFloor residentialBuildingFloorRes = residentialBuildingFloorMapper.selectByMap(params);
+                if (null != residentialBuildingFloorRes && !residentialBuildingFloorRes.getFloor_id().equals(residentialBuildingFloor.getFloor_id())) {
+                    return ResultMsg.createErrorMsg("楼层已经存在.");
+                }
+                ResidentialBuildingFloor residentialBuildingFloorOld = residentialBuildingFloorMapper.selectByPrimaryKey(residentialBuildingFloor.getFloor_id());
+                if (null != residentialBuildingFloorOld && !residentialBuildingFloorOld.getUpdate_time().equals(residentialBuildingFloor.getUpdate_time())) {
+                    return ResultMsg.createErrorMsg("数据已经被其他用户更新，请返回重新编辑");
+                }
+                // 如果名称有更新,同步到房源中的物业地址[无单元不能修改为其他单元,不能再添加单元,楼层无须同步,直接同步房号即可]
+                if (!residentialBuildingFloorOld.getFloor_name().equals(residentialBuildingFloor.getFloor_name())) {
+                    ResidentialBuilding residentialBuilding = residentialBuildingMapper.selectByPrimaryKey(residentialBuildingFloorOld.getBuilding_id());
+                    if (null == residentialBuilding) {
+                        return ResultMsg.createErrorMsg("栋座不存在");
+                    }
+                    ResidentialBuildingUnit residentialBuildingUnit = residentialBuildingUnitMapper.selectByPrimaryKey(residentialBuildingFloorOld.getUnit_id());
+                    if (null == residentialBuildingUnit) {
+                        return ResultMsg.createErrorMsg("单元不存在");
+                    }
+                    Map<String, Object> paramsMap = new HashMap<String, Object>();
+                    paramsMap.put("residential_id", residentialBuilding.getResidential_id());
+                    paramsMap.put("building_id", residentialBuilding.getBuilding_id());
+                    paramsMap.put("unit_name", residentialBuildingUnit.getUnit_name());
+                    paramsMap.put("floor_name", residentialBuildingFloorOld.getFloor_name());
+                    List<House> houseList = houseMapper.selectListByMap(paramsMap);
+                    if (null != houseList && houseList.size() > 0) {
+                        for (House houseOld : houseList) {
+                            if (!StringUtil.isNullOrEmpty(houseOld.getHouse_id())) {
+                                House house = new House();
+                                house.setHouse_id(houseOld.getHouse_id());
+                                house.setFloor(residentialBuildingFloor.getFloor_name());
+                                house.setFloor_id(residentialBuildingFloor.getFloor_id());
+                                house.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                                house.setUpdate_uid(sysUser.getUser_id());
+                                houseMapper.updateByPrimaryKeySelective(house);
+                                houseServiceBiz.saveFollow(house, "【同步楼层:" + houseOld.getFloor() + "=>" + house.getFloor() + "】");
+                            }
+                        }
+                    }
+                }
+                residentialBuildingFloor.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingFloor.setUpdate_uid(sysUser.getUser_id());
+                residentialBuildingFloorMapper.updateByPrimaryKeySelective(residentialBuildingFloor);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 楼层信息
+     *
+     * @param floor_id
+     * @return ResultObjectMsg<ResidentialBuildingFloor>
+     * @throws Exception
+     */
+    public ResultObjectMsg<ResidentialBuildingFloor> selectResidentialBuildingFloorDetail(String floor_id) throws Exception {
+        return new ResultObjectMsg<ResidentialBuildingFloor>(residentialBuildingFloorMapper.selectByPrimaryKey(floor_id));
+    }
+
+    /**
+     * 房号列表
+     *
+     * @param pageData
+     * @return ResultObjectMsg<PagingHelper<ResidentialBuildingHouseNo>>
+     * @throws Exception
+     */
+    public ResultObjectMsg<PagingHelper<ResidentialBuildingHouseNo>> searchBuildingHouseNoList(Map<String, Object> pageData) throws Exception {
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        PagingHelper<ResidentialBuildingHouseNo> ph = new PagingHelper<ResidentialBuildingHouseNo>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+
+        List<ResidentialBuildingHouseNo> list = residentialBuildingHouseNoMapper.searchBuildingHouseNoList(pageData);
+        Integer count = residentialBuildingHouseNoMapper.countSearchBuildingHouseNo(pageData);
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<ResidentialBuildingHouseNo>>(ph);
+    }
+
+    /**
+     * 删除房号
+     *
+     * @param house_no_id
+     * @param sysUser
+     * @return
+     * @throws Exception
+     */
+    @Transactional
+    public ResultMsg deleteResidentialBuildingHouseNo(String house_no_id, SysUser sysUser) throws Exception {
+        try {
+            ResidentialBuildingHouseNo residentialBuildingHouseNo = residentialBuildingHouseNoMapper.selectByPrimaryKey(house_no_id);
+            if (null == residentialBuildingHouseNo) {
+                return ResultMsg.createErrorMsg("房号不存在.");
+            }
+            ResidentialBuilding residentialBuilding = residentialBuildingMapper.selectByPrimaryKey(residentialBuildingHouseNo.getBuilding_id());
+            if (null == residentialBuilding) {
+                return ResultMsg.createErrorMsg("栋座不存在.");
+            }
+            ResidentialBuildingUnit residentialBuildingUnit = residentialBuildingUnitMapper.selectByPrimaryKey(residentialBuildingHouseNo.getUnit_id());
+            if (null == residentialBuildingUnit) {
+                return ResultMsg.createErrorMsg("单元不存在.");
+            }
+            ResidentialBuildingFloor residentialBuildingFloor = residentialBuildingFloorMapper.selectByPrimaryKey(residentialBuildingHouseNo.getFloor_id());
+            if (null == residentialBuildingFloor) {
+                return ResultMsg.createErrorMsg("楼层不存在.");
+            }
+            Map<String, Object> paramsMap = new HashMap<String, Object>();
+            paramsMap.put("residential_id", residentialBuilding.getResidential_id());
+            paramsMap.put("building_id", residentialBuilding.getBuilding_id());
+            paramsMap.put("unit_name", residentialBuildingUnit.getUnit_name());
+            paramsMap.put("floor_name", residentialBuildingFloor.getFloor_name());
+            paramsMap.put("house_no", residentialBuildingHouseNo.getHouse_no());
+            Integer res = houseMapper.isUse4Residential(paramsMap);
+            if (null != res && res > 0) {
+                return ResultMsg.createErrorMsg("已存在房源,不能删除.");
+            }
+            residentialBuildingHouseNoMapper.deleteByPrimaryKey(house_no_id);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 保存房号
+     *
+     * @param residentialBuildingHouseNo
+     * @param sysUser
+     * @return ResultMsg
+     * @throws Exception
+     */
+    @Transactional
+    public ResultMsg saveResidentialBuildingHouseNo(ResidentialBuildingHouseNo residentialBuildingHouseNo, SysUser sysUser) throws Exception {
+        try {
+            if (StringUtil.isNullOrEmpty(residentialBuildingHouseNo.getHouse_no())) {
+                return ResultMsg.createErrorMsg("缺少房号名称.");
+            }
+            if(residentialBuildingHouseNo.getHouse_no().trim().startsWith("0")) {
+                return ResultMsg.createErrorMsg("房号名称不能以0开头.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuildingHouseNo.getBuilding_id())) {
+                return ResultMsg.createErrorMsg("缺少栋座ID.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuildingHouseNo.getUnit_id())) {
+                return ResultMsg.createErrorMsg("缺少单元ID.");
+            }
+            if (StringUtil.isNullOrEmpty(residentialBuildingHouseNo.getFloor_id())) {
+                return ResultMsg.createErrorMsg("缺少楼层ID.");
+            }
+            // 新增
+            if (StringUtil.isNullOrEmpty(residentialBuildingHouseNo.getHouse_no_id())) {
+                ResidentialBuildingFloor residentialBuildingFloor = residentialBuildingFloorMapper.selectByPrimaryKey(residentialBuildingHouseNo.getFloor_id());
+                if (null == residentialBuildingFloor) {
+                    return ResultMsg.createErrorMsg("楼层不存在.");
+                }
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("building_id", residentialBuildingFloor.getBuilding_id());
+                params.put("unit_id", residentialBuildingFloor.getUnit_id());
+                params.put("floor_id", residentialBuildingFloor.getFloor_id());
+                params.put("house_no",residentialBuildingHouseNo.getHouse_no());
+                ResidentialBuildingHouseNo residentialBuildingHouseNoRes = residentialBuildingHouseNoMapper.selectByMap(params);
+                if (null != residentialBuildingHouseNoRes) {
+                    return ResultMsg.createErrorMsg("房号已经存在.");
+                }
+                residentialBuildingHouseNo.setHouse_no_id(UuidUtil.getUUID());
+                residentialBuildingHouseNo.setSort("0");
+                residentialBuildingHouseNo.setCity_code(residentialBuildingFloor.getCity_code());
+                residentialBuildingHouseNo.setArea_code(residentialBuildingFloor.getArea_code());
+                residentialBuildingHouseNo.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingHouseNo.setCreate_uid(sysUser.getUser_id());
+                residentialBuildingHouseNo.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingHouseNo.setUpdate_uid(sysUser.getUser_id());
+                residentialBuildingHouseNoMapper.insert(residentialBuildingHouseNo);
+            } else {
+                // 编辑
+                Map<String, Object> params = new HashMap<String, Object>();
+                params.put("building_id", residentialBuildingHouseNo.getBuilding_id());
+                params.put("unit_id", residentialBuildingHouseNo.getUnit_id());
+                params.put("floor_id", residentialBuildingHouseNo.getFloor_id());
+                params.put("house_no",residentialBuildingHouseNo.getHouse_no());
+                ResidentialBuildingHouseNo residentialBuildingHouseNoRes = residentialBuildingHouseNoMapper.selectByMap(params);
+                if (null != residentialBuildingHouseNoRes && !residentialBuildingHouseNoRes.getHouse_no_id().equals(residentialBuildingHouseNo.getHouse_no_id())) {
+                    return ResultMsg.createErrorMsg("房号已经存在.");
+                }
+                ResidentialBuildingHouseNo residentialBuildingHouseNoOld = residentialBuildingHouseNoMapper.selectByPrimaryKey(residentialBuildingHouseNo.getHouse_no_id());
+                if (null != residentialBuildingHouseNoOld && !residentialBuildingHouseNoOld.getUpdate_time().equals(residentialBuildingHouseNo.getUpdate_time())) {
+                    return ResultMsg.createErrorMsg("数据已经被其他用户更新，请返回重新编辑");
+                }
+                // 如果名称有更新,同步到房源中的物业地址[无单元不能修改为其他单元,不能再添加单元]
+                if (!residentialBuildingHouseNoOld.getHouse_no().equals(residentialBuildingHouseNo.getHouse_no())) {
+                    ResidentialBuilding residentialBuilding = residentialBuildingMapper.selectByPrimaryKey(residentialBuildingHouseNoOld.getBuilding_id());
+                    if (null == residentialBuilding) {
+                        return ResultMsg.createErrorMsg("栋座不存在");
+                    }
+                    ResidentialBuildingUnit residentialBuildingUnit = residentialBuildingUnitMapper.selectByPrimaryKey(residentialBuildingHouseNoOld.getUnit_id());
+                    if (null == residentialBuildingUnit) {
+                        return ResultMsg.createErrorMsg("单元不存在");
+                    }
+                    ResidentialBuildingFloor residentialBuildingFloor = residentialBuildingFloorMapper.selectByPrimaryKey(residentialBuildingHouseNoOld.getFloor_id());
+                    if (null == residentialBuildingFloor) {
+                        return ResultMsg.createErrorMsg("楼层不存在");
+                    }
+                    Map<String, Object> paramsMap = new HashMap<String, Object>();
+                    paramsMap.put("residential_id", residentialBuilding.getResidential_id());
+                    paramsMap.put("building_id", residentialBuilding.getBuilding_id());
+                    paramsMap.put("unit_name", residentialBuildingUnit.getUnit_name());
+                    paramsMap.put("floor_name", residentialBuildingFloor.getFloor_name());
+                    paramsMap.put("house_no", residentialBuildingHouseNoOld.getHouse_no());
+                    List<House> houseList = houseMapper.selectListByMap(paramsMap);
+                    if (null != houseList && houseList.size() > 0) {
+                        Residential residential = residentialMapper.selectByPrimaryKey(residentialBuilding.getResidential_id());
+                        if (null == residential) {
+                            return ResultMsg.createErrorMsg("楼盘不存在.");
+                        }
+                        for (House houseOld : houseList) {
+                            if (!StringUtil.isNullOrEmpty(houseOld.getHouse_id())) {
+                                House house = new House();
+                                house.setHouse_id(houseOld.getHouse_id());
+                                house.setHouse_no(residentialBuildingHouseNo.getHouse_no());
+                                house.setHouse_no_id(residentialBuildingHouseNo.getHouse_no_id());
+                                house.setProperty_name(residential.getResidential_name() + residentialBuilding.getBuilding_name() + ("无".equals(houseOld.getUnit()) ? "" : houseOld.getUnit()) + residentialBuildingHouseNo.getHouse_no() + "室");
+                                house.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                                house.setUpdate_uid(sysUser.getUser_id());
+                                houseMapper.updateByPrimaryKeySelective(house);
+                                houseServiceBiz.saveFollow(house, "【同步房号:" + houseOld.getHouse_no() + "=>" + house.getHouse_no() + "】" + "【同步物业地址:" + houseOld.getProperty_name() + "=>" + house.getProperty_name() + "】");
+                            }
+                        }
+                    }
+                }
+                residentialBuildingHouseNo.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                residentialBuildingHouseNo.setUpdate_uid(sysUser.getUser_id());
+                residentialBuildingHouseNoMapper.updateByPrimaryKeySelective(residentialBuildingHouseNo);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    /**
+     * 房号信息
+     *
+     * @param pageData
+     * @return ResultObjectMsg<ResidentialBuildingHouseNo>
+     * @throws Exception
+     */
+    public ResultObjectMsg<ResidentialBuildingHouseNo> selectResidentialBuildingHouseNoDetail(Map<String, Object> pageData) throws Exception {
+        return new ResultObjectMsg<ResidentialBuildingHouseNo>(residentialBuildingHouseNoMapper.selectByMap(pageData));
+    }
+}

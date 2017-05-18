@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.HouseConfigurationMapper">
+	<!-- resultMap -->
+	<resultMap id="HouseConfigurationBaseMap" type="com.isz.erp.facade.house.entity.HouseConfiguration">
+	    <id column="configuration_id" property="configuration_id"/>
+	    <result column="residential_id" property="residential_id"/>
+	    <result column="building_id" property="building_id"/>
+	    <result column="house_id" property="house_id"/>
+	    <result column="configuration_code" property="configuration_code"/>
+	    <result column="create_time" property="create_time"/>
+	    <result column="create_uid" property="create_uid"/>
+ 	</resultMap>
+ 	
+ 	<!-- 批量插入房屋设备信息 -->
+	<insert id="saveHouseConfiguration" parameterType="java.util.List">
+		INSERT INTO `house_configuration` 
+			(`configuration_id`,`residential_id`, `building_id`, `house_id`, `configuration_code`, `create_time`, `create_uid`)
+		VALUES
+        <foreach collection="list" item="item" index="index" separator="," >  
+     	   (#{item.configuration_id},#{item.residential_id},#{item.building_id},#{item.house_id},#{item.configuration_code},now(),#{item.create_uid})
+   		</foreach>
+  	</insert>
+  	<!-- 删除当前房屋下的所有设备信息 -->
+  	<delete id="deleteByHouseId" parameterType="java.lang.String">
+  		DELETE FROM `house_configuration` WHERE `house_id`=#{house_id}
+  	</delete>
+
+  	<!-- 返回出租房屋的配套设施列表 -->
+  	<select id="selectListByHouseId" parameterType="java.lang.String" resultMap="HouseConfigurationBaseMap">
+  		SELECT `configuration_id`,`residential_id`,`building_id`,`house_id`,`configuration_code`, 
+  		`create_time`,`create_uid`
+  		FROM `house_configuration` WHERE `house_id`=#{house_id}
+  	</select>
+	
+  	<!-- 根据房屋ID查询楼盘房屋设备信息 -->
+	<select id="selectByHouseId" parameterType="java.lang.String" resultMap="HouseConfigurationBaseMap">
+		SELECT configuration_id,residential_id,building_id,house_id,configuration_code,create_time,create_uid
+		FROM house_configuration 
+		WHERE house_id=#{house_id}
+	</select>
+	
+</mapper>

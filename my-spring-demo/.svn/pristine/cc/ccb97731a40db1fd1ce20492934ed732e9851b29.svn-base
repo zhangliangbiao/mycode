@@ -1,0 +1,66 @@
+package com.isz.erp.service.resource.service.impl;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import net.sf.json.JSONObject;
+
+import org.apache.log4j.Logger;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.house.service.ApartmentService;
+import com.isz.erp.facade.user.vo.SessionVo;
+
+/**
+ * 
+ * 自营公寓接口测试
+ * 
+ * @author lws * luwenshan@ishangzu.com
+ * @date 创建时间：2016年1月22日 下午6:29:49
+ * @version 1.0 *
+ * @instruction 说明：
+ */
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = { "classpath:spring/spring-context.xml" })
+public class ApartmentServiceFacadeTest {
+	private static Logger logger = Logger.getLogger(ApartmentServiceFacadeTest.class);
+
+	@Autowired
+	private ApartmentService apartmentService;
+	
+	/**
+	 * 自营公寓-列表
+	 */
+	@Test
+	public void testApartmentList() {
+		Map<String, Object> data = new HashMap<String, Object>();
+		data.put("rent_type", "SHARE");
+		data.put("pageNumber", "1");
+		data.put("pageSize", "2");
+		ResultObjectMsg<PagingHelper<Apartment>> apartmentList = apartmentService.searchApartmentList(data);
+		logger.info(apartmentList);
+		System.out.println("++++++++++++++++++++++ " + apartmentList);
+		System.out.println("testApartmentList: "+JSONObject.fromObject(apartmentList).toString());
+	}
+
+	/**
+	 * 自营公寓-详情
+	 */
+	@Test
+	public void testApartmentDetail() {
+		String apartmentId = "1";
+		ResultObjectMsg<Apartment> apartmentResult = apartmentService.selectApartmentDetail(null,apartmentId);
+		Apartment apartment = (Apartment) apartmentResult.getObj();
+		logger.info(JSONObject.fromObject(apartment).toString());
+		System.out.println("++++++++++++++++++++++ " + apartment);
+		System.out.println("testApartmentDetail: " + JSONObject.fromObject(apartment).toString());
+	}
+
+}

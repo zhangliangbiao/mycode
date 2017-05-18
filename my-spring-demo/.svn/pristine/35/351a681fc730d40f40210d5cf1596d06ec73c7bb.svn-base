@@ -1,0 +1,10 @@
+package com.isz.erp.house.mapper;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.LockOpenRecord;
+
+/**
+ * Created by shaozhipeng on 16/6/3.
+ */
+public   interface LockOpenRecordMapper extends Mapper<LockOpenRecord> {
+}

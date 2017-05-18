@@ -1,0 +1,40 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.Residential;
+import com.isz.erp.facade.house.entity.ResidentialBuilding;
+import com.isz.erp.facade.house.entity.ResidentialBuildingFloor;
+import com.isz.erp.facade.house.entity.ResidentialBuildingHouseNo;
+import com.isz.erp.facade.house.entity.ResidentialBuildingUnit;
+import com.isz.erp.facade.house.entity.ResidentialBusinessCircle;
+import com.isz.erp.facade.house.entity.ResidentialDepartment;
+import com.isz.erp.facade.house.entity.ResidentialExcelProcess;
+import com.isz.erp.facade.user.entity.SysDepart;
+import com.isz.erp.house.vo.BusinessCircleVo;
+
+public interface ResidentialImportMapper extends Mapper<ResidentialExcelProcess>  {
+	//public void insertResidentialExcelProcess(ResidentialExcelProcess rep);
+	public List<ResidentialExcelProcess> selectResidentialExcelProcess(Map<String,Object> pageData);
+	public int selectResidentialExcelProcessCount(Map<String,Object> pageData);
+	
+	public Residential selectResidential(Residential residential);
+	public List<ResidentialBuilding> selectResidentialBuilding(ResidentialBuilding residentialBuilding);
+	public List<ResidentialBuildingUnit> selectResidentialBuildingUnit(ResidentialBuildingUnit residentialBuildingUnit);
+	public List<ResidentialBuildingFloor> selectResidentialBuildingFloor(ResidentialBuildingFloor residentialBuildingFloor);
+	public List<ResidentialBuildingHouseNo> selectResidentialBuildingHouseNo(ResidentialBuildingHouseNo residentialBuildingHouseNo);
+	
+	public void insertResidentialBuildingBatch(List<ResidentialBuilding>  newBuildingList);
+	public void insertResidentialBuildingUnitBatch(List<ResidentialBuildingUnit>  newUnitList);
+	public void insertResidentialBuildingFloorBatch(List<ResidentialBuildingFloor>  newFloorList);
+	public void insertResidentialBuildingHouseNoBatch(List<ResidentialBuildingHouseNo>  newHouseList);
+	
+	public List<BusinessCircleVo> selectCityAreaBusinessCircle(BusinessCircleVo businessCircleVo);
+	public List<SysDepart> selectDepartByCityCode(String city_code);
+	
+	public void insertResidentialBatch(List<Residential>  newResidentialList);
+	public void insertResidentialBusinessCircleBatch(List<ResidentialBusinessCircle>  newResidentialBusinessList);
+	public void insertResidentialDepartmentBatch(List<ResidentialDepartment>  newResidentialDepartmentList);
+}

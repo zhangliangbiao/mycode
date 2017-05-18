@@ -1,0 +1,13 @@
+package com.isz.erp.house.mapper;
+
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.LockPassword;
+import java.util.List;
+/**
+ * Created by shaozhipeng on 16/6/12.
+ */
+public interface LockPasswordMapper extends Mapper<LockPassword> {
+    public List<Map<String, Object>> searchApiLockPassword(Map<String, Object> apiParams);
+}

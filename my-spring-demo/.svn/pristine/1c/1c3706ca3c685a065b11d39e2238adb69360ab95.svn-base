@@ -1,0 +1,29 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.FitmentRoom;
+
+/**
+ * 装修房间
+ * 
+ * @author SZP * zhipenglees@gmail.com
+ * @date 创建时间：2016年3月5日 上午10:20:22 *
+ * @version 1.0 *
+ * @instruction 说明：装修房间
+ */
+public interface FitmentRoomMapper extends Mapper<FitmentRoom> {
+
+	public void deleteByHouseId(String house_id);
+
+	public List<FitmentRoom> selectListByFitmentId(String fitment_id);
+
+	public void deleteByFitmentId(String fitment_id);
+
+	public FitmentRoom selectFitmentRoomByMap(Map<String,Object> pageData);
+
+	public String selectFitmentRoomIdsByFitmentId(String fitment_id);
+
+}

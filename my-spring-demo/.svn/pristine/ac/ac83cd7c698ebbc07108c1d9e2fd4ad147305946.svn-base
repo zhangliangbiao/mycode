@@ -1,0 +1,8 @@
+package com.isz.erp.house.mapper;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseWash;
+
+public interface HouseWashMapper extends Mapper<HouseWash> {
+
+}

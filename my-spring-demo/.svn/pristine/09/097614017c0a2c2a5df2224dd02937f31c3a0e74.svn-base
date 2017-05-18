@@ -1,0 +1,28 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseAuditStatusChange;
+
+public interface HouseAuditStatusChangeMapper extends Mapper<HouseAuditStatusChange> {
+	
+	public List<HouseAuditStatusChange> selectByHouseId(Map<String, Object> map);
+	
+	
+	public List<Map<String, String>> selectHouseStatusChangeList(Map<String, Object> map);
+	public int selectHouseStatusChangeListCount(Map<String, Object> map);
+	public int deleteHouseStatusChangeById(String change_id);
+	
+	/**
+	 * 查询当前房源状态修改状态的申请记录
+	 * @param house_id
+	 * @return
+	 */
+	public int selectHouseStatusChangeCountByHouseId(String house_id);
+	
+	public HouseAuditStatusChange selectByChangeId(String change_id);
+	
+	public void updateHouseAuditStatusChangeById(HouseAuditStatusChange houseAuditStatusChange);
+}

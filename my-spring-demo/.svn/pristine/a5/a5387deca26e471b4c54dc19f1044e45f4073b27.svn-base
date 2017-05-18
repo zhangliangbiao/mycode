@@ -1,0 +1,270 @@
+package com.isz.erp.house.biz;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.beanutils.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.DateUtil;
+import com.isz.erp.common.util.DictConstants;
+import com.isz.erp.common.util.ParameterUtil;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.common.util.StringUtil;
+import com.isz.erp.common.util.UuidUtil;
+import com.isz.erp.facade.house.entity.Follow;
+import com.isz.erp.facade.user.entity.SysPosition;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.facade.user.service.PositionService;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.mapper.FollowMapper;
+
+/**
+ * 房源跟进
+ *
+ * @author ql
+ */
+@Service("followServiceBiz")
+public class FollowServiceBiz {
+
+    @Autowired
+    private FollowMapper followMapper;
+    @Autowired
+    private PositionService positionService;
+
+    public ResultObjectMsg<PagingHelper<Follow>> sercherFollowList(SessionVo sessionVo, Map<String, Object> pageData) throws Exception {
+        if (null == pageData) {
+            return new ResultObjectMsg<PagingHelper<Follow>>("参数不正确.");
+        }
+
+        String objectType = (String) pageData.get("object_type");
+        if (StringUtil.isNullOrEmpty(objectType)) {
+            return new ResultObjectMsg<PagingHelper<Follow>>("缺少跟进的对象类型[租客|出租房源|自营公寓].");
+        }
+
+        int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+        int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+        // 只有租客和出租房源有权限限制
+//        if (DictConstants.FollowObjectType.CUSTOMER.value().equals(objectType)) {
+//            // 数据权限
+//            if (null != sessionVo) {
+//            	
+//                // SQL：跟进人、跟进部门；租客归属人、租客归属部门
+//                String permType = sessionVo.getRoleDataPermType(DictConstants.DataType.CUSTOMERFOLLOW.value());
+//
+//                if (StringUtil.isNullOrEmpty(permType) || permType.equals(DictConstants.PermType.PERSON.value())) {
+//                    pageData.put("permValue", sessionVo.generateUserSQL(DictConstants.DataType.CUSTOMERFOLLOW.value()));
+//                    pageData.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.CUSTOMERFOLLOW.value()));
+//                } else if (permType.equals(DictConstants.PermType.DEPARTMENT.value())) {
+//                    pageData.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.CUSTOMERFOLLOW.value()));
+//                }
+//            }
+//        } else if (DictConstants.FollowObjectType.HOUSE.value().equals(objectType)) {
+//            // SQL：跟进人、跟进部门
+//            String permType = sessionVo.getRoleDataPermType(DictConstants.DataType.HOUSEFOLLOW.value());
+//
+//            if (StringUtil.isNullOrEmpty(permType) || permType.equals(DictConstants.PermType.PERSON.value())) {
+//                pageData.put("permValue", sessionVo.generateUserSQL(DictConstants.DataType.HOUSEFOLLOW.value()));
+//                pageData.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.HOUSEFOLLOW.value()));
+//            } else if (permType.equals(DictConstants.PermType.DEPARTMENT.value())) {
+//                pageData.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.HOUSEFOLLOW.value()));
+//            }
+//        }
+        ResultObjectMsg<List<SysPosition>> rom= positionService.getAllPositionChild(sessionVo.getSysUser().getPosition_id());
+        List<SysPosition> ps=rom.getObj();
+        StringBuffer sb=new StringBuffer();
+        for(SysPosition sp:ps){
+        	sb.append("'").append(sp.getPosition_id()).append("'").append(",");
+        }
+        pageData.put("depId", sessionVo.getSysUser().getDep_id());
+        pageData.put("userId", sessionVo.getSysUser().getUser_id());
+        pageData.put("positionIds", sb.length()>0?sb.substring(0, sb.length()-1):null);
+
+        PagingHelper<Follow> ph = new PagingHelper<Follow>();
+        ph.setPerPageSize(page_size);
+        ph.setCurrentPage(page_num);
+        pageData.put("begin_num", ph.getBeginRowNumber());
+        pageData.put("end_num", ph.getEndRowNumber());
+        List<Follow> list = followMapper.searchFollowList(pageData);
+        Integer count = followMapper.countSearchFollow(pageData);
+        ph.setTotal(count); // 设置总的记录数
+        ph.setRows(list); // 设置返回的记录
+        return new ResultObjectMsg<PagingHelper<Follow>>(ph);
+    }
+
+    @Transactional
+    public ResultMsg saveFollow(Follow follow, SysUser user) throws Exception {
+        try {
+            if (StringUtil.isNullOrEmpty(follow.getObject_type())) {
+                return ResultMsg.createErrorMsg("对象类型不存在.");
+            }
+            if (null == follow.getObject_id()) {
+                return ResultMsg.createErrorMsg("对象ID不存在.");
+            }
+            if (StringUtil.isNullOrEmpty(follow.getFollow_type())) {
+                return ResultMsg.createErrorMsg("请选择跟进类型.");
+            }
+            if (StringUtil.isNullOrEmpty(follow.getFollow_content())) {
+                return ResultMsg.createErrorMsg("请填写跟进内容.");
+            }
+            if (StringUtil.isNullOrEmpty(follow.getFollow_open())) {
+                return ResultMsg.createErrorMsg("请选择是否公开.");
+            }
+            // 主键
+            follow.setFollow_id(UuidUtil.getUUID());
+            follow.setFollow_date((StringUtil.isNullOrEmpty(follow.getFollow_date()) ? DateUtil.getCurrentDateTimeAsString()
+                    : follow.getFollow_date()));
+            follow.setCreate_uid(user.getUser_id());
+            follow.setUpdate_uid(user.getUser_id());
+            follow.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+            follow.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+            follow.setDeleted(0);
+            followMapper.insert(follow);
+            return ResultMsg.createOkMsg();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ResultObjectMsg<Follow> selectFollowDetail(String follow_id) throws Exception {
+        if (null == follow_id) {
+            return new ResultObjectMsg<Follow>("缺少出租跟进ID.");
+        }
+        Follow houseRentFollow = followMapper.selectByPrimaryKey(follow_id);
+        return new ResultObjectMsg<Follow>(houseRentFollow);
+    }
+
+    @Transactional
+    public ResultMsg deleteFollow(String follow_id, SysUser sysUser) throws Exception {
+        try {
+            if (null == follow_id) {
+                return ResultMsg.createErrorMsg("缺少出租跟进ID.");
+            }
+            Follow followOld = followMapper.selectByPrimaryKey(follow_id);
+            if (null != followOld) {
+                if (DictConstants.FollowObjectType.HOUSE.value().equals(followOld.getObject_type()) && DictConstants.HouseFollowType.SYSTEMEDIT.value().equals(followOld.getFollow_type())) {
+                    return ResultMsg.createErrorMsg("不能删除系统跟进.");
+                }
+                if (DictConstants.FollowObjectType.APARTMENT.value().equals(followOld.getObject_type()) && DictConstants.ApartmentRentFollowType.SYSTEMEDIT.value().equals(followOld.getFollow_type())) {
+                    return ResultMsg.createErrorMsg("不能删除系统跟进.");
+                }
+                if (DictConstants.FollowObjectType.CUSTOMER.value().equals(followOld.getObject_type()) && DictConstants.CustomerFollowType.SYSTEMEDIT.value().equals(followOld.getFollow_type())) {
+                    return ResultMsg.createErrorMsg("不能删除系统跟进.");
+                }
+                followOld.setDeleted(1);
+                followOld.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+                followOld.setUpdate_uid(sysUser.getUser_id());
+                followMapper.updateByPrimaryKeySelective(followOld);
+            }
+            return ResultMsg.createOkMsg();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 
+     * ResultObjectMsg<Follow>
+     * @author longzq
+     * @param map
+     * @return
+     */
+	public ResultObjectMsg<Follow> getLastFollow(Map<String, Object> map) {
+		 if (null == map) {
+	            return new ResultObjectMsg<Follow>("参数错误.");
+	        }
+		 if (null == map.get("object_id")) {
+	            return new ResultObjectMsg<Follow>("缺少租客ID.");
+	        }
+		 
+	        Follow follow = followMapper.getLastFollow(map);
+	        return new ResultObjectMsg<Follow>(follow);
+	}
+	
+	  /**
+     * 
+     * ResultObjectMsg<Follow>
+     * @author longzq
+     * @param map
+     * @return
+     */
+	public ResultObjectMsg<Follow> getLastNotSysFollow(Map<String, Object> map) {
+		 if (null == map) {
+	            return new ResultObjectMsg<Follow>("参数错误.");
+	        }
+		 if (null == map.get("object_id")) {
+	            return new ResultObjectMsg<Follow>("缺少租客ID.");
+	        }
+		 
+	        Follow follow = followMapper.getLastNotSysFollow(map);
+	        return new ResultObjectMsg<Follow>(follow);
+	}
+
+	public ResultObjectMsg<Integer> countAllFollowByObjectId(
+			Map<String, Object> map) {
+		 if (null == map) {
+	            return new ResultObjectMsg<Integer>("参数错误.");
+	        }
+		 if (null == map.get("object_id")) {
+	            return new ResultObjectMsg<Integer>("缺少租客ID.");
+	        }
+	        Integer count = followMapper.countAllFollowByObjectId(map);
+	        return new ResultObjectMsg<Integer>(count);
+	}
+
+	/**
+	 * 租前客户跟进导出EXCEL
+	 * @param queryParaMap
+	 * @return
+	 * @throws Exception
+	 * 2016年8月18日
+	 * ligaochao
+	 */
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> searchFollowListForExportExcel(Map<String, Object> queryParaMap) throws Exception {
+
+        String objectType = (String) queryParaMap.get("object_type");
+        SessionVo sessionVo = (SessionVo) queryParaMap.get("sessionVo");
+        // 只有租客和出租房源有权限限制
+        if (DictConstants.FollowObjectType.CUSTOMER.value().equals(objectType)) {
+            // 数据权限
+            if (null != sessionVo) {
+                // SQL：跟进人、跟进部门；租客归属人、租客归属部门
+                String permType = sessionVo.getRoleDataPermType(DictConstants.DataType.CUSTOMERFOLLOW.value());
+
+                if (StringUtil.isNullOrEmpty(permType) || permType.equals(DictConstants.PermType.PERSON.value())) {
+                    queryParaMap.put("permValue", sessionVo.generateUserSQL(DictConstants.DataType.CUSTOMERFOLLOW.value()));
+                    queryParaMap.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.CUSTOMERFOLLOW.value()));
+                } else if (permType.equals(DictConstants.PermType.DEPARTMENT.value())) {
+                    queryParaMap.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.CUSTOMERFOLLOW.value()));
+                }
+            }
+        } else if (DictConstants.FollowObjectType.HOUSE.value().equals(objectType)) {
+            // SQL：跟进人、跟进部门
+//            String permType = sessionVo.getRoleDataPermType(DictConstants.DataType.HOUSEFOLLOW.value());
+//
+//            if (StringUtil.isNullOrEmpty(permType) || permType.equals(DictConstants.PermType.PERSON.value())) {
+//                queryParaMap.put("permValue", sessionVo.generateUserSQL(DictConstants.DataType.HOUSEFOLLOW.value()));
+//                queryParaMap.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.HOUSEFOLLOW.value()));
+//            } else if (permType.equals(DictConstants.PermType.DEPARTMENT.value())) {
+//                queryParaMap.put("deptValue", sessionVo.generateDeptSQL(DictConstants.DataType.HOUSEFOLLOW.value()));
+//            }
+        }
+
+        List<Follow> followList = followMapper.searchFollowList(queryParaMap);
+        List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
+        for(Follow follow : followList){
+        	//楼盘地址与页面保持一致
+        	follow.setResidential_name(follow.getResidential_name()+follow.getBuilding_unit()+follow.getHouse_no()+"室");
+			result.add(BeanUtils.describe(follow));
+		}
+		return result;
+	}
+
+}

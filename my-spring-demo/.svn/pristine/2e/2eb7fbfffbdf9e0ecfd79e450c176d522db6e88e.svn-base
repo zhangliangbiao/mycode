@@ -1,0 +1,41 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseRoom;
+
+/**
+ * 出租房间
+ * 
+ * @author SZP * zhipenglees@gmail.com
+ * @date 创建时间：2016年3月5日 下午4:18:14 *
+ * @version 1.0 *
+ * @instruction 说明：出租房间
+ */
+public interface HouseRoomMapper extends Mapper<HouseRoom> {
+
+	public void deleteByHouseIdContractId(Map<String, Object> pageData);
+
+	public void insertHouseRoom(HouseRoom houseRoom);
+
+	public void deleteByFitmentId(Map<String, Object> pageData);
+
+	public String selectSignedByHouseAndRoom(Map<String, Object> pageData);
+
+	public void deleteByHouseIdAndRoomId(Map<String, Object> pageData);
+
+	public List<HouseRoom> selectListByHouseIdContractId(Map<String, Object> pageData);
+
+	public HouseRoom selectByEntireHouseIdAndPublicFlag(Map<String, Object> pageData);
+
+	public HouseRoom selectByShareHouseIdAndPublicFlag(Map<String, Object> pageData);
+
+	public HouseRoom selectByFitmentRoomId(String fitment_room_id);
+
+	public String selectRoomIdsByFitmentId(String fitment_id);
+
+	public HouseRoom selectByMap(Map<String,Object> pageData);
+
+}

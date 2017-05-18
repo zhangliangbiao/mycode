@@ -1,0 +1,63 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseDevelopImg;
+
+/**
+ * 开发房源图片
+ * 
+ * @author SZP * zhipenglees@gmail.com
+ * @date 创建时间：2016年1月18日 下午12:14:34 *
+ * @version 1.0 *
+ * @instruction 说明：开发房源图片
+ */
+public interface HouseDevelopImgMapper extends Mapper<HouseDevelopImg> {
+
+	/**
+	 * 删除开发房源下的所有图片-不可恢复
+	 * 
+	 * @param house_develop_id
+	 */
+	public void deleteByHouseDevelopId(String house_develop_id);
+
+	/**
+	 * 批量插入开发房源图片
+	 * 
+	 * @param listSave
+	 */
+	public void saveHouseDevelopImg(List<HouseDevelopImg> listSave);
+
+	/**
+	 * 开发房源图片-分页列表
+	 * 
+	 * @param pageData
+	 * @return List<HouseDevelopImg>
+	 */
+	public List<HouseDevelopImg> searchHouseDevelopImgList(Map<String, Object> pageData);
+
+	/**
+	 * 符合条件的开发房源图片记录总数
+	 * 
+	 * @param pageData
+	 * @return Integer
+	 */
+	public Integer countSearchHouseDevelopImg(Map<String, Object> pageData);
+
+	/**
+	 * 开发房源图片-新增
+	 * 
+	 * @param houseDevelopImg
+	 */
+	public void insertHouseDevelopImg(HouseDevelopImg houseDevelopImg);
+
+	/**
+	 * 开发房源图片-删除
+	 * 
+	 * @param house_img_id
+	 */
+	public void deleteByHouseImgId(String house_img_id);
+
+}

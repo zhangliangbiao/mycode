@@ -1,0 +1,634 @@
+package com.isz.erp.service.resource.service.impl;
+
+import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import com.isz.erp.common.util.*;
+import com.isz.erp.facade.house.service.ApartmentService;
+import org.apache.log4j.Logger;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import com.alibaba.fastjson.JSON;
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.HouseDevelop;
+import com.isz.erp.facade.house.entity.HouseDevelopConfiguration;
+import com.isz.erp.facade.house.entity.HouseDevelopImg;
+import com.isz.erp.facade.house.entity.HouseImg;
+import com.isz.erp.facade.house.entity.HouseRent;
+import com.isz.erp.facade.house.service.HouseService;
+import com.isz.erp.facade.user.entity.SysUser;
+
+import net.sf.json.JSONObject;
+
+/**
+ * @author WangShuo *
+ * @version 1.0 *
+ * @date 创建时间：2016年1月13日 下午5:23:50 *
+ * @instruction 说明：
+ */
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = {"classpath:spring/spring-context.xml"})
+public class HouseServiceFacadeTest {
+    private static Logger logger = Logger.getLogger(HouseServiceFacadeTest.class);
+
+    @Autowired
+    private HouseService houseService;
+
+    @Autowired
+    private ApartmentService apartmentService;
+
+    @Test
+    public void testCheckIsSysUseredidential() {
+        fail("Not yet implemented");
+    }
+
+//    /**
+//     * 开发房源-新建
+//     */
+//    @Test
+//    public void testHouseDevelopCreat() {
+//        try {
+//            HouseDevelop houseDevelop = new HouseDevelop();
+//            houseDevelop.setCity_code("310100");// 亳州
+//            houseDevelop.setArea_code("310101");// 蒙城
+//            // 根据city_code和area_code返回拼音如BZ + MC
+//            houseDevelop.setHouse_code("SHHP" + MD5Util.md516(UUID.randomUUID().toString()));// C层生成
+//            houseDevelop.setResidential_name("美东小区");
+//            houseDevelop.setBusiness_circle_name("滨江浦沿");
+//            houseDevelop.setBuilding_name("18幢");
+//
+//            houseDevelop.setUnit("3");
+//            houseDevelop.setFloor("19");
+//            houseDevelop.setHouse_no("1909");
+//            houseDevelop.setGround_floors(30);
+//            houseDevelop.setUnderground_floors(2);
+//            houseDevelop.setHave_elevator(DictConstants.YesNo.Y.value());
+//            houseDevelop.setTotle_buildings(2);
+//            houseDevelop.setRooms(5);
+//            houseDevelop.setLivings(1);
+//            houseDevelop.setKitchens(1);
+//            houseDevelop.setBathrooms(2);
+//            houseDevelop.setBalconys(1);
+//            houseDevelop.setBuild_area(66.05);
+//            houseDevelop.setOrientation(DictConstants.Orientation.SOURTH.value());
+//            houseDevelop.setProperty_type(DictConstants.PropertyType.ordinary.value());
+//            houseDevelop.setProperty_use(DictConstants.PropertyUse.residential.value());
+//            houseDevelop.setProperty_right(DictConstants.PropertyRight.BACK_BUILDING.value());
+//            houseDevelop.setFitment_type(DictConstants.FitmentType.FITMENT_REFINED.value());
+//            houseDevelop.setLook_type(DictConstants.LookType.APPOINTMENT.value());
+//            houseDevelop.setLook_date(DateUtil.getCurrentDateAsString());
+//            houseDevelop.setSource(DictConstants.HouseStatus.WAITING_RENT.value());
+//            houseDevelop.setNow_status(DictConstants.NowStatus.RENTER_LIVE.value());
+//            houseDevelop.setContact("邵志鹏");
+//            houseDevelop.setContact_tel("18356766178");
+//            houseDevelop.setRental_price(58888.88);
+//            houseDevelop.setDid("1");
+//            houseDevelop.setUid("1");
+//
+//            houseDevelop.setHouse_status(DictConstants.HouseDevelopStatus.VALID.value());
+//            houseDevelop.setRemark("测试新增房屋信息11");
+//
+//            HouseDevelopConfiguration HouseDevelopConfiguration1 = new HouseDevelopConfiguration();
+//            HouseDevelopConfiguration1.setConfiguration_code(DictConstants.HouseElectricConfiguration.AIR_CONDITION.value());
+//            HouseDevelopConfiguration HouseDevelopConfiguration2 = new HouseDevelopConfiguration();
+//            HouseDevelopConfiguration2.setConfiguration_code(DictConstants.HouseElectricConfiguration.ELECTRIC_HEATER.value());
+//            HouseDevelopConfiguration HouseDevelopConfiguration3 = new HouseDevelopConfiguration();
+//            HouseDevelopConfiguration3.setConfiguration_code(DictConstants.HouseGroundConfiguration.COMMENT_COURT.value());
+//            List<HouseDevelopConfiguration> houseDevelopConfigurationList = new ArrayList<HouseDevelopConfiguration>();
+//            houseDevelopConfigurationList.add(HouseDevelopConfiguration1);
+//            houseDevelopConfigurationList.add(HouseDevelopConfiguration2);
+//            houseDevelopConfigurationList.add(HouseDevelopConfiguration3);
+//            houseDevelop.setHouseDevelopConfigurationList(houseDevelopConfigurationList);
+//
+//            // 当前用户
+//            SysUser SysUser = new SysUser();
+//            SysUser.setUser_id("1");
+//            houseDevelop.setCreate_uid(SysUser.getUser_id());
+//            houseDevelop.setUpdate_uid(SysUser.getUser_id());
+////			houseService.saveHouseDevelop(houseDevelop);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 开发房源-编辑
+//     */
+//    @Test
+//    public void testHouseDevelopUpdate() {
+//        String house_develop_id = "8";
+//        ResultObjectMsg<HouseDevelop> houseDevelopResult = houseService.selectHouseDevelopDetail(house_develop_id);
+//        if (null != houseDevelopResult && null != houseDevelopResult.getObj()) {
+//            HouseDevelop houseDevelop = new HouseDevelop();
+//            houseDevelop.setHouse_develop_id(house_develop_id);
+//            // 当前用户
+//            SysUser SysUser = new SysUser();
+//            SysUser.setUser_id("2");
+//            houseDevelop.setUpdate_uid(SysUser.getUser_id());
+//
+//            houseDevelop.setFitment_type(DictConstants.FitmentType.FITMENT_REFINED.value());
+//            houseDevelop.setRental_price(88888.99);
+//
+//            HouseDevelopConfiguration HouseDevelopConfiguration1 = new HouseDevelopConfiguration();
+//            HouseDevelopConfiguration1.setConfiguration_code(DictConstants.HouseElectricConfiguration.ELECTRIC_HEATER.value());
+//            HouseDevelopConfiguration HouseDevelopConfiguration2 = new HouseDevelopConfiguration();
+//            HouseDevelopConfiguration2.setConfiguration_code(DictConstants.HouseGroundConfiguration.COMMENT_COURT.value());
+//            List<HouseDevelopConfiguration> houseDevelopConfigurationeList = new ArrayList<HouseDevelopConfiguration>();
+//            houseDevelopConfigurationeList.add(HouseDevelopConfiguration1);
+//            houseDevelopConfigurationeList.add(HouseDevelopConfiguration2);
+//            houseDevelop.setHouseDevelopConfigurationList(houseDevelopConfigurationeList);
+//            try {
+////				houseService.saveHouseDevelop(houseDevelop);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                logger.error(e.getMessage());
+//            }
+//        }
+//    }
+//
+//    /**
+//     * 开发房源-列表
+//     */
+//    @Test
+//    public void testHouseDevelopList() {
+//        Map<String, Object> data = new HashMap<String, Object>();
+///*		data.put("house_code", "BZMC");
+//        data.put("area_code", "341622");*/
+////		data.put("pageNumber", "1");
+////		data.put("pageSize", "2");
+////		data.put("sort", "house_no");
+////		data.put("order", "asc");
+////		data.put("did_search", "1,3");
+//        data.put("house_status_search", "INVALID,VALID");
+//        ResultObjectMsg<PagingHelper<HouseDevelop>> houseDevelopList = houseService.searchHouseDevelopList(data);
+//        logger.info(houseDevelopList);
+//
+//        System.out.println("testHouseDevelopList: " + JSON.toJSONString(houseDevelopList));
+//        //	System.out.println("testHouseDevelopList1"+ com.alibaba.fastjson.JSONObject.toJSONString(residentialMapper.searchResidentialList(data)));
+//
+//
+//    }
+//
+//    /**
+//     * 开发房源-详情
+//     */
+//    @Test
+//    public void testHouseDevelopDetail() {
+//        String house_develop_id = "8";
+//        ResultObjectMsg<HouseDevelop> houseDevelopResult = houseService.selectHouseDevelopDetail(house_develop_id);
+//        HouseDevelop houseDevelop = (HouseDevelop) houseDevelopResult.getObj();
+//        logger.info(JSONObject.fromObject(houseDevelop).toString());
+//        System.out.println("testHouseDevelopDetail: " + JSONObject.fromObject(houseDevelop).toString());
+//    }
+//
+//    /**
+//     * 开发房源-删除
+//     */
+//    @Test
+//    public void testHouseDevelopDelete() {
+////		Integer house_develop_id = 1;
+//        try {
+////			houseService.deleteHouseDevelop(house_develop_id);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.info(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 开发房源-审核(当审核状态为通过时即激活为出租房源)
+//     */
+//    @Test
+//    public void testHouseDevelopAudit() {
+//        String house_develop_id = "3";
+//        try {
+//            ResultObjectMsg<HouseDevelop> houseDevelopResult = houseService.selectHouseDevelopDetail(house_develop_id);
+//            HouseDevelop houseDevelop = (HouseDevelop) houseDevelopResult.getObj();
+//            // 当前用户
+//            SysUser SysUser = new SysUser();
+//            SysUser.setUser_id("4");
+//            houseDevelop.setAudit_status(DictConstants.AuditStatus.PASS.value());
+//            houseDevelop.setAudit_time(DateUtil.getCurrentDateTimeAsString());
+//            houseDevelop.setAudit_uid(SysUser.getUser_id());
+//            houseDevelop.setUpdate_uid(SysUser.getUser_id());
+////			houseService.auditHouseDevelop(houseDevelop);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.info(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 开发房源-当前房屋的图片列表--分页
+//     */
+//    @Test
+//    public void testHouseDevelopImgPagedList() {
+//        Map<String, Object> data = new HashMap<String, Object>();
+//        data.put("house_develop_id", 1);
+//        ResultObjectMsg<PagingHelper<HouseDevelopImg>> HouseDevelopImgListResult = houseService.searchHouseDevelopImgList(data);
+//        logger.info(HouseDevelopImgListResult.getObj());
+//        System.out.println("testHouseDevelopImgPagedList: " + JSONObject.fromObject(HouseDevelopImgListResult.getObj()).toString());
+//    }
+//
+//    /**
+//     * 开发房源-当前房屋的图片列表--不分页
+//     */
+//    @Test
+//    public void testHouseDevelopImgList() {
+//        Map<String, Object> data = new HashMap<String, Object>();
+//        data.put("house_develop_id", 1);
+//        ResultObjectMsg<List<HouseDevelopImg>> HouseDevelopImgListResult = houseService.selectHouseDevelopImgList(data);
+//        logger.info(HouseDevelopImgListResult);
+//        System.out.println("testHouseDevelopImgList: " + JSONObject.fromObject(HouseDevelopImgListResult).toString());
+//    }
+//
+//    /**
+//     * 开发房源图片-添加单个图片
+//     */
+//    @Test
+//    public void testHouseDevelopImgAdd() {
+//        try {
+//            HouseDevelopImg houseDevelopImg = new HouseDevelopImg();
+//            // 当前用户
+//            SysUser SysUser = new SysUser();
+//            SysUser.setUser_id("5");
+//            houseDevelopImg.setCreate_uid(SysUser.getUser_id());
+//
+//            String house_develop_id = "1";
+//            ResultObjectMsg<HouseDevelop> houseDevelopResult = houseService.selectHouseDevelopDetail(house_develop_id);
+//
+//            houseDevelopImg.setHouse_develop_id(((HouseDevelop) houseDevelopResult.getObj()).getHouse_develop_id());
+//            houseDevelopImg.setImg_id("2");
+//            houseDevelopImg.setImg_name("开发房源图片3");
+//            houseDevelopImg.setImg_type(DictConstants.ImgType.HOUSE_IMGS.value());
+//
+//            houseService.addHouseDevelopImg(houseDevelopImg);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 开发房源图片-删除单个图片
+//     */
+//    @Test
+//    public void testHouseDevelopImgDelete() {
+//        try {
+//            // 当前用户
+//            String house_img_id = "1";
+//            houseService.deleteHouseDevelopImg(house_img_id);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-新建
+//     */
+//    @Test
+//    public void testHouseCreate() {
+//        // 测试即C层
+//        try {
+//            House house = new House();
+//            house.setResidential_id("1");
+//            house.setBuilding_id("1");
+//            house.setCity_code("341600");// 亳州
+//            house.setArea_code("341622");// 蒙城
+//            // 根据city_code和area_code返回拼音如BZ + MC
+//            house.setHouse_code("BZMC" + MD5Util.md516(UUID.randomUUID().toString()));// C层生成
+//            house.setUnit("1");
+//            house.setFloor("28");
+//            house.setHouse_no("1301");
+//            house.setRooms(4);
+//            house.setLivings(1);
+//            house.setKitchens(1);
+//            house.setBathrooms(2);
+//            house.setBalconys(1);
+//            house.setBuild_area(66.0);
+//            house.setOrientation("东 南 北");
+//            house.setProperty_type(DictConstants.PropertyType.ordinary.value());
+//            house.setProperty_use(DictConstants.PropertyUse.residential.value());
+//            house.setProperty_right(DictConstants.PropertyRight.BACK_BUILDING.value());
+//            house.setFitment_type(DictConstants.FitmentType.FITMENT_LUXURIOUS.value());
+//            house.setRemark("测试新增房屋信息");
+//            // 当前用户
+//            SysUser SysUser = new SysUser();
+//            SysUser.setUser_id("1");
+//            house.setCreate_uid(SysUser.getUser_id());
+//            house.setUpdate_uid(SysUser.getUser_id());
+////			houseService.saveHouse(house);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-编辑
+//     *
+//     * @throws Exception
+//     */
+//    @Test
+//    public void testHouseUpdate() throws Exception {
+//        String house_id = "1";
+//        ResultObjectMsg<House> houseResult = houseService.selectHouseDetail(house_id);
+//        // 当前用户
+//        SysUser SysUser = new SysUser();
+//        SysUser.setUser_id("2");
+//        House house = (House) houseResult.getObj();
+//        house.setUpdate_uid(SysUser.getUser_id());
+//        house.setResidential_id("1");
+//        house.setBuilding_id("1");
+//        house.setCity_code("341600");// 亳州
+//        house.setArea_code("341622");// 蒙城
+//        // 根据city_code和area_code返回拼音如BZ + MC
+//        house.setUnit("1");
+//        house.setFloor("29");
+//        house.setHouse_no("1302");
+//        house.setRooms(4);
+//        house.setLivings(1);
+//        house.setKitchens(1);
+//        house.setBathrooms(2);
+//        house.setBalconys(1);
+//        house.setBuild_area(66.0);
+//        house.setOrientation("东 南 北");
+//        house.setProperty_type(DictConstants.PropertyType.ordinary.value());
+//        house.setProperty_use(DictConstants.PropertyUse.residential.value());
+//        house.setProperty_right(DictConstants.PropertyRight.BACK_BUILDING.value());
+//        house.setFitment_type(DictConstants.FitmentType.FITMENT_ROUGH.value());
+//        house.setRemark("测试新增房屋信息");
+//        HouseRent houseRent = new HouseRent();
+//        house.setHouseRent(houseRent);
+//        try {
+////			houseService.saveHouse(house);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-列表
+//     */
+//    @Test
+//    public void testHouseList() {
+//        Map<String, Object> data = new HashMap<String, Object>();
+//        ResultObjectMsg<PagingHelper<House>> houseListResult = houseService.searchHouse(data);
+//        logger.info(houseListResult);
+//        System.out.println("testHouseList: " + JSONObject.fromObject(houseListResult).toString());
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-详情
+//     */
+//    @Test
+//    public void testHouseDetail() {
+//        String house_id = "16";
+//        ResultObjectMsg<House> houseResult = houseService.selectHouseDetail(house_id);
+//        logger.info(JSONObject.fromObject(houseResult).toString());
+//        System.out.println("testHouseDetail: " + JSONObject.fromObject(houseResult).toString());
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-删除
+//     */
+//    @Test
+//    public void testHouseDelete() {
+////		Integer house_id = 1;
+//        try {
+////			houseService.deleteHouse(house_id);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.info(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-当前房屋的图片列表--分页
+//     */
+//    @Test
+//    public void testHouseImgPagedList() {
+//        Map<String, Object> data = new HashMap<String, Object>();
+//        data.put("house_id", 1);
+//        ResultObjectMsg<PagingHelper<HouseImg>> houseImgListResult = houseService.searchHouseImgList(data);
+//        logger.info(houseImgListResult);
+//        System.out.println("testHouseImgPagedList: " + JSONObject.fromObject(houseImgListResult).toString());
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-当前房屋的图片列表--不分页
+//     */
+//    @Test
+//    public void testHouseImgList() {
+//        Map<String, Object> data = new HashMap<String, Object>();
+//        data.put("house_id", 1);
+//        ResultObjectMsg<List<HouseImg>> houseImgListResult = houseService.selectHouseImgList(data);
+//        logger.info(houseImgListResult);
+//        System.out.println("testHouseImgList: " + JSONObject.fromObject(houseImgListResult).toString());
+//    }
+
+//    /**
+//     * 楼盘房屋信息-添加单个图片
+//     */
+//    @Test
+//    public void testHouseImgAdd() {
+//        try {
+//            HouseImg houseImg = new HouseImg();
+//            // 当前用户
+//            SysUser SysUser = new SysUser();
+//            SysUser.setUser_id("2");
+//            houseImg.setCreate_uid(SysUser.getUser_id());
+//
+//            String house_id = "1";
+//            ResultObjectMsg<House> houseResult = houseService.selectHouseDetail(house_id);
+//            House house = (House) houseResult.getObj();
+//            houseImg.setHouse_id(house.getHouse_id());
+//
+//            houseImg.setResidential_id(house.getResidential_id());
+//            houseImg.setBuilding_id(house.getBuilding_id());
+//
+//            houseImg.setImg_id("2");
+//            houseImg.setImg_name("楼盘房屋图片测试2");
+//            houseImg.setImg_type(DictConstants.ImgType.HOUSE_IMGS.value());
+//
+////            houseService.addHouseImg(houseImg);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-删除单个图片
+//     */
+//    @Test
+//    public void testHouseImgDelete() {
+//        try {
+//            // 当前用户
+//            String house_img_id = "1";
+//            houseService.deleteHouseImg(house_img_id);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error(e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 楼盘房屋图片详情
+//     */
+//    @Test
+//    public void testHouseImgDetail() {
+//        String house_img_id = "1";
+//        ResultObjectMsg<HouseImg> houseImgResult = houseService.selectHouseImgDetail(house_img_id);
+//        logger.info(JSONObject.fromObject(houseImgResult).toString());
+//        System.out.println("testHouseImgDetail: " + JSONObject.fromObject(houseImgResult).toString());
+//    }
+//
+//    /**
+//     * 楼盘房屋信息-图片审核
+//     */
+//    @Test
+//    public void testHouseImgAudit() {
+//        try {
+//            String house_img_id = "1";
+//            SysUser SysUser = new SysUser();
+//            SysUser.setUser_id("2");
+//            ResultObjectMsg<HouseImg> houseImgResult = houseService.selectHouseImgDetail(house_img_id);
+//            HouseImg houseImg = (HouseImg) houseImgResult.getObj();
+//            houseImg.setAudit_time(DateUtil.getCurrentDateTimeAsString());
+//            houseImg.setAudit_uid(SysUser.getUser_id());
+//            houseImg.setAudit_status(DictConstants.AuditStatus.NO_PASS.value());
+//            houseService.updateHouseImg(houseImg);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error(e.getMessage());
+//        }
+//    }
+//
+////    public static void main(String[] args) throws Exception {
+////        logger.info(MD5Util.md516((UUID.randomUUID().toString())));
+////        System.out.println(DateUtil.getCurrentDateTimeAsString());
+////    }
+//
+//    /**
+//     * 根据小区名称模糊查询楼盘列表
+//     */
+//    @Test
+//    public void testSearchApiResidential() {
+//        Map<String, Object> params = new HashMap<String, Object>();
+//        params.put("premName", "楼盘");
+//        logger.info(JSONObject.fromObject(houseService.searchApiResidential(params)).toString());
+//    }
+//
+//    /**
+//     * 根据小区ID获取所有房源信息
+//     */
+//    @Test
+//    public void testSearchApiApartment() {
+//        Map<String, Object> params = new HashMap<String, Object>();
+//        params.put("premId", "58");
+//        logger.info(JSONObject.fromObject(houseService.searchApiApartment(params)).toString());
+//    }
+//
+//    /**
+//     * 根据出租房源ID返回出租房源信息
+//     */
+//    @Test
+//    public void testSearchApiHouse() {
+//        logger.info(JSONObject.fromObject(houseService.searchApiHouse("100")).toString());
+//    }
+//
+    @Test
+    public void testSearchApiImage() {
+        logger.info("测试图片API返回数据列表.");
+        logger.info("测试图片API返回数据列表:"+JSONObject.fromObject(houseService.searchApiImage("'4028803e57562f34015765e313f3001a','4028803e57562f34015765e2f9ee0019'")).toString());
+    }
+//
+//    @Test
+//    public void testSearchApiApartmentByContract() {
+//        Map<String, Object> paramsMap = new HashMap<String, Object>();
+//        paramsMap.put("contract_id", "24308");
+//        houseService.searchApiApartmentByContract(paramsMap).toString();
+//    }
+//
+//    /**
+//     * 激活house_room
+//     */
+//    @Test
+//    public void testSyncApartmentIsActive() {
+//        SysUser sysUser = new SysUser();
+//        sysUser.setUser_id("00000000000000000000000000000000");
+//        apartmentService.syncApartmentIsActive(sysUser,"4028803E564478470156448670AF0036",null);
+//    }
+//
+//    /**
+//     * 着火状态的计算
+//     */
+    @Test
+    public void testExecuteCalculateFireStatusJob() {
+        apartmentService.executeCalculateFireStatusJob();
+    }
+//
+//    @Test
+//    public void testCreateUUID() {
+//        System.out.println(UuidUtil.getUUID());
+//    }
+//
+//    public static void main(String[] args) {
+//        System.out.println(UuidUtil.getUUID());
+//    }
+//
+//    /**
+//     * 全量更新
+//     */
+//    @Test
+//    public void testSolrHouseIndexAll() {
+//        houseService.solrHouseIndexAll();
+//    }
+//
+//    /**
+//     * 增量更新
+//     */
+//    @Test
+//    public void testSolrHouseUpdateIndexByUpdateTime() {
+//        houseService.solrHouseUpdateIndexByUpdateTime();
+//    }
+//
+//    /**
+//     * 增量删除
+//     */
+//    @Test
+//    public void testSolrHouseDeleteIndexByUpdateTime() {
+//        houseService.solrHouseDeleteIndexByUpdateTime();
+//    }
+//
+//    /**
+//     * 增量删除所有已删除的房源
+//     */
+//    @Test
+//    public void testsolrHouseDeleteIndexAll() {
+//        houseService.solrHouseDeleteIndexAll();
+//    }
+//
+    /**
+     * 测试Apartment索引数据
+     */
+    @Test
+    public void testExecuteApartmentSolr() {
+        apartmentService.solrApartmentIndexAll();
+    }
+
+}

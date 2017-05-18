@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.HouseLinkmanMapper">
+	<!-- resultMap -->
+	<resultMap id="HouseLinkmanBaseMap" type="com.isz.erp.facade.house.entity.HouseLinkman">
+	    <id column="linkman_id" property="linkman_id"/>
+	    <result column="residential_id" property="residential_id"/>
+	    <result column="building_id" property="building_id"/>
+	    <result column="house_id" property="house_id"/>
+	    <result column="name" property="name"/>
+	    <result column="gender" property="gender"/>
+	    <result column="mobile_phone_number" property="mobile_phone_number"/>
+	    <result column="telephone_number" property="telephone_number"/>
+	    <result column="remark" property="remark"/>
+	    <result column="deleted" property="deleted"/>
+	    <result column="create_time" property="create_time"/>
+	    <result column="create_uid" property="create_uid"/>
+	    <result column="update_time" property="update_time"/>
+	    <result column="update_uid" property="update_uid"/>
+ 	</resultMap>
+ 	
+ 	<!-- 批量插入房屋联系人信息 -->
+	<insert id="saveHouseLinkman" parameterType="java.util.List">
+		INSERT INTO `house_linkman` 
+		(`linkman_id`,`residential_id`, `building_id`, `house_id`, `name`, `gender`, `mobile_phone_number`, `telephone_number`,
+		`remark`, `deleted`, `create_time`, `create_uid`, `update_time`, `update_uid`)
+		VALUES
+        <foreach collection="list" item="item" index="index" separator="," >  
+     	   (#{item.linkman_id},#{item.residential_id},#{item.building_id},#{item.house_id},#{item.name},#{item.gender},#{item.mobile_phone_number},#{item.telephone_number},
+     	   #{item.remark},#{item.deleted},#{item.create_time},#{item.create_uid},#{item.update_time},#{item.update_uid})  
+   		</foreach>  
+  	</insert>
+  	
+ 	<!-- 更新房屋联系人信息 -->
+	<update id="updateHouseLinkman" parameterType="java.util.List">
+           UPDATE `house_linkman` 
+           <set>
+               <if test="residential_id != null">
+				  residential_id = #{residential_id},
+			   </if>
+               <if test="building_id != null">
+				  building_id = #{building_id},
+			   </if>
+               <if test="house_id != null">
+				  house_id = #{house_id},
+			   </if>
+               <if test="name != null">
+				  name = #{name},
+			   </if>
+               <if test="gender != null">
+				  gender = #{gender},
+			   </if>
+               <if test="mobile_phone_number != null">
+				  mobile_phone_number = #{mobile_phone_number},
+			   </if>
+               <if test="telephone_number != null">
+				  telephone_number = #{telephone_number},
+			   </if>
+               <if test="remark != null">
+				  remark = #{remark},
+			   </if>
+               <if test="deleted != null">
+				  deleted = #{deleted},
+			   </if>
+               <if test="create_time != null">
+				  create_time = #{create_time},
+			   </if>
+               <if test="create_uid != null">
+				  create_uid = #{create_uid},
+			   </if>
+               <if test="update_time != null">
+				  update_time = #{update_time},
+			   </if>
+               <if test="update_uid != null">
+				  update_uid = #{update_uid}
+			   </if>
+           </set>
+           where linkman_id = #{linkman_id}
+  	</update>
+  	<!-- 删除当前房屋下的所有联系人信息 -->
+  	<delete id="deleteByHouseId" parameterType="java.util.Map">
+  		UPDATE `house_linkman` SET `deleted`=1, update_time=#{update_time}, update_uid=#{update_uid}  WHERE `house_id`=#{house_id}
+  	</delete>
+  	<!-- 联系人列表 -->
+  	<select id="selectListByHouseId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.HouseLinkman">
+  	    SELECT * FROM house_linkman  WHERE house_id=#{house_id} AND deleted=0
+  	    ORDER BY update_time
+  	</select>
+  	<!-- 插入联系人信息 -->
+  	<insert id="insertHouseLinkman" parameterType="com.isz.erp.facade.house.entity.HouseLinkman">
+  		INSERT INTO `house_linkman` 
+		(`linkman_id`,`residential_id`, `building_id`, `house_id`, `name`, `gender`, `mobile_phone_number`, `telephone_number`,
+		`remark`, `deleted`, `create_time`, `create_uid`, `update_time`, `update_uid`)
+		VALUES
+   	   	(#{linkman_id},#{residential_id},#{building_id},#{house_id},#{name},#{gender},#{mobile_phone_number},#{telephone_number},
+   	   	#{remark},#{deleted},#{create_time},#{create_uid},#{update_time},#{update_uid})  
+  	</insert>
+  	<!-- 联系人详情 -->
+  	<select id="selectByLinkmanId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.entity.HouseLinkman">
+  		SELECT hl.*,su1.user_name create_user_name,su2.user_name update_user_name FROM house_linkman hl
+  		LEFT JOIN sys_user su1 ON hl.create_uid=su1.user_id
+  		LEFT JOIN sys_user su2 ON hl.update_uid=su2.user_id
+  		WHERE linkman_id=#{linkman_id} AND deleted=0
+  	</select>
+  	<!-- searchHouseLinkmanList -->
+  	<select id="searchHouseLinkmanList" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.entity.HouseLinkman">
+  		SELECT hl.*,su1.user_name create_user_name,su2.user_name update_user_name 
+  		FROM house_linkman hl
+  		LEFT JOIN sys_user su1 ON hl.create_uid=su1.user_id
+  		LEFT JOIN sys_user su2 ON hl.update_uid=su2.user_id
+  		WHERE house_id=#{house_id} AND deleted=0
+  	    ORDER BY update_time
+  	</select>
+  	<select id="countSearchHouseLinkman" parameterType="java.util.Map" resultType="java.lang.Integer">
+  		SELECT count(hl.linkman_id)
+  		FROM house_linkman hl
+  		LEFT JOIN sys_user su1 ON hl.create_uid=su1.user_id
+  		LEFT JOIN sys_user su2 ON hl.update_uid=su2.user_id
+  		WHERE house_id=#{house_id} AND deleted=0
+  	</select>
+</mapper>

@@ -1,0 +1,35 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseLinkman;
+
+/**
+ * 房屋联系人Mapper
+ * 
+ * @author SZP * zhipenglees@gmail.com
+ * @date 创建时间：2016年1月15日 下午12:44:55 *
+ * @version 1.0 *
+ * @instruction 说明：房屋联系人Mapper
+ */
+public interface HouseLinkmanMapper extends Mapper<HouseLinkman> {
+
+	public void saveHouseLinkman(List<HouseLinkman> listSave);
+
+	public void deleteByHouseId(Map<String, Object> pageData);
+
+	public void insertHouseLinkman(HouseLinkman houseLinkman);
+
+	public void updateHouseLinkman(HouseLinkman houseLinkman);
+
+	public HouseLinkman selectByLinkmanId(String linkman_id);
+
+	public List<HouseLinkman> searchHouseLinkmanList(Map<String, Object> pageData);
+
+	public Integer countSearchHouseLinkman(Map<String, Object> pageData);
+
+	public List<HouseLinkman> selectListByHouseId(String house_id);
+}
+

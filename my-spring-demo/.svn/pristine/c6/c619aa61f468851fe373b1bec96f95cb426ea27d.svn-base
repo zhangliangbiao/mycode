@@ -1,0 +1,46 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.ApartmentCount;
+import com.isz.erp.facade.house.entity.ApartmentCountRented;
+import com.isz.erp.facede.bzlog.entity.ApartmentLog;
+
+/**
+ * 记录每天的公寓
+ * @author isz
+ *
+ */
+public interface ApartmentLogMapper extends Mapper<ApartmentLog> {
+
+    /**
+     * 查出所有的有效公寓
+     *
+     * @param params
+     * @return
+     */
+    public List<ApartmentLog> searchApartmentListByLog(Map<String, Object> params);
+    
+    
+    /**
+     * 总数
+     * @param params
+     * @return
+     */
+    public Integer searchApartmentListCountByLog(Map<String, Object> params);
+
+    /**
+     * 保存
+     */
+    public void insertApartmentCount(ApartmentCount apartmentCount);
+    
+    /**
+     * 查询昨天的
+     * @return
+     */
+    public ApartmentCount selectPreDayApartment();
+    
+    public void insertApartmentCountRented(ApartmentCountRented apartmentCountRented);
+}

@@ -1,0 +1,236 @@
+package com.isz.erp.house.mapper;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.user.entity.SysUser;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 自营公寓官网发布
+ *
+ * @author hjj 
+ * @version 1.0 *
+ * @date 创建时间：2016年1月22日 下午6:11:02
+ * @instruction 说明：
+ */
+public interface OnlineApartmentMapper extends Mapper<Apartment> {
+
+    public Map<String, Object> selectCurrentApartmentRentPrice(String apartmentContractId);
+
+    /**
+     * 符合查询条件的自营房源信息
+     *
+     * @param data
+     * @return
+     */
+    public List<Apartment> searchOnlineApartmentList(Map<String, Object> data);
+
+    /**
+     * 符合查询条件的自营房源总数
+     *
+     * @param data
+     * @return
+     */
+    public Integer countSearchOnlineApartment(Map<String, Object> data);
+
+    /**
+     * 符合查询条件的自营房源信息
+     *
+     * @param data
+     * @return
+     */
+    public List<Apartment> searchPhotoApartmentList(Map<String, Object> data);
+
+    /**
+     * 符合查询条件的自营房源总数
+     *
+     * @param data
+     * @return
+     */
+    public Integer countSearchPhotoApartment(Map<String, Object> data);
+    
+    
+    
+    /**
+     * 根据自营公寓ID返回整租房源信息
+     *
+     * @param apartmentId
+     * @return
+     */
+    public Apartment selectEntireHouseByApartmentId(String apartmentId);
+
+    /**
+     * 符合查询 条件的合租房源信息
+     *
+     * @param data
+     * @return
+     */
+    public List<Apartment> searchShareHouseList(Map<String, Object> data);
+
+    /**
+     * 符合查询条件的合租房源总数
+     *
+     * @param data
+     * @return
+     */
+    public Integer countShareHouse(Map<String, Object> data);
+
+    /**
+     * 根据自营公寓ID返回合租房源信息
+     *
+     * @param apartmentId
+     * @return
+     */
+    public Apartment selectShareHouseByApartmentId(String apartmentId);
+
+    /**
+     * 更新公寓信息
+     *
+     * @param apartment
+     * @return
+     */
+    public void updateApartmentById(Apartment apartment);
+
+    /**
+     * 判断公寓是否有出租合同记录
+     *
+     * @param apartment_id
+     * @return
+     */
+    public Integer countApartmentContract(String apartment_id);
+
+    /**
+     * 查询是否有自营公寓出租合同应收租金数据
+     *
+     * @param apartment_id
+     * @return
+     */
+    public Integer searchApartmentContractReceivable(String apartment_id);
+
+    /**
+     * 查询是否有自营公寓实收租金数据
+     *
+     * @param apartment_id
+     * @return
+     */
+    public Integer searchApartmentContractReceipts(String apartment_id);
+
+    /**
+     * 生成一条公寓
+     *
+     * @param apartment
+     */
+    public void insertApartment(Apartment apartment);
+
+    /**
+     * 未删除的整租房源公寓
+     *
+     * @param pageData
+     * @return Apartment
+     */
+    public Apartment selectByHouseIdContractId(Map<String, Object> pageData);
+
+    /**
+     * 未删除的合租房源公寓
+     *
+     * @param pageData
+     * @return Apartment
+     */
+    public Apartment selectByRoomIdContractId(Map<String, Object> pageData);
+
+    /**
+     * 删除合租公寓
+     *
+     * @param pageData
+     */
+    public void deleteByHouseIdAndRoomId(Map<String, Object> pageData);
+
+    /**
+     * 有效的委托合同ID所在出租房源的所有公寓
+     *
+     * @param house_contract_id
+     * @return List<Apartment>
+     */
+    public List<Apartment> selectByHouseContractId(String house_contract_id);
+
+    /**
+     * @param house_contract_id void
+     * @Description:批量更新房源状态
+     * @exception:
+     * @author: zhangqy
+     * @time:2016年5月11日 上午10:45:52
+     */
+    public void batchApartmentExpire(List<String> ids);
+
+    public Integer selectByHouseId(String house_id);
+    /**
+     * 根据house_id查询未删除的公寓
+     *
+     * @param pageData
+     */
+
+    /**
+     * 根据合同编号和房源编号查找apartment是否存在
+     *
+     * @param house_contract_id
+     * @param house_code
+     */
+    public Integer selectApartmentByContractIdAndHouseCode(String house_contract_id, String house_code);
+
+    /**
+     * 根据小区ID获取所有房源信息
+     *
+     * @param apiParams
+     * @return List<Map<String,Object>>
+     */
+    public List<Map<String, Object>> searchApiApartment(Map<String, Object> apiParams);
+
+    /**
+     * 返回当前出租房源下所有激活未删除的公寓列表
+     *
+     * @param house_id
+     * @return List<Apartment>
+     */
+    public List<Apartment> selectListByHouseId(String house_id);
+
+    /**
+     * 自营公寓官网维护人
+     *
+     * @param apartmentId
+     * @return
+     */
+    public SysUser selectApartmentWebUser(String apartmentId);
+
+    /**
+     * 预订房源-整租合租列表
+     *
+     * @param pageData
+     * @return List<Map<String,Object>>
+     */
+    public List<Map<String, Object>> searchBookAvailabilityApartmentList(Map<String, Object> pageData);
+
+    /**
+     * 预定房源-整租合租记录总数
+     *
+     * @param pageData
+     * @return Integer
+     */
+    public Integer countSearchBookAvailabilityApartment(Map<String, Object> pageData);
+
+    /**
+     * 待定价房源列表
+     *
+     * @param apartment_id
+     * @return List<Map<String, Object>>
+     */
+    public List<Map<String, Object>> searchPricingApartment(String apartment_id);
+
+    /**
+     * 更新出租状态或房源类别
+     *
+     * @param apartment
+     */
+    public void updateApartmentStatusCategory(Apartment apartment);
+}

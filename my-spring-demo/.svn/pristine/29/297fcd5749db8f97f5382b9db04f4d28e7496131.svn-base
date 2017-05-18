@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.ResidentialDepartmentMapper">
+	
+	<!-- 保存商圈关系 -->
+	<insert id="saveResidentialDept" useGeneratedKeys="true" parameterType="java.util.List">
+        INSERT INTO residential_department (residential_dep_id, residential_id, did, create_time, create_uid)
+        VALUES 
+        <foreach collection="list" item="item" index="index" separator="," >  
+     	   (#{item.residential_dep_id},#{item.residential_id},#{item.did},now(),#{item.create_uid})  
+   		</foreach>
+  </insert>
+  
+  <!-- 根据楼盘id删除楼盘和部门的关系 -->
+  <delete id="deleteResidentialDeptByResidentialId" parameterType="java.lang.String">
+      DELETE FROM residential_department where residential_id = #{residential_id}
+  
+  </delete>
+  
+  <!-- 根据id查找责任人 -->
+  <select id="selecttaResidentialById" parameterType="java.lang.String" resultType="java.lang.String">
+  	SELECT
+		GROUP_CONCAT(did) tadepartString
+	FROM
+		residential_department
+	WHERE
+		residential_id = #{0}
+	GROUP BY
+		residential_id
+  </select>
+  
+</mapper>

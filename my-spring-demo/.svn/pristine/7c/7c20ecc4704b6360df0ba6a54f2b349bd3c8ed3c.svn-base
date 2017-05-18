@@ -1,0 +1,149 @@
+package com.isz.erp.house.biz;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.DateUtil;
+import com.isz.erp.common.util.DictConstants;
+import com.isz.erp.common.util.ParameterUtil;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.HouseAuditStatusChange;
+import com.isz.erp.facade.house.entity.HouseExploration;
+import com.isz.erp.facade.house.entity.HouseRent;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.mapper.HouseAuditStatusChangeMapper;
+import com.isz.erp.house.mapper.HouseRentMapper;
+
+/**
+ * 房源实勘业务实现
+ *
+ * @author hjj
+ * @version 1.0 *
+ * @date 创建时间：2016年10月27日 下午3:38:09
+ * @instruction 说明：
+ */
+@Service("houseAuditStatusChangeBiz")
+public class HouseAuditStatusChangeBiz {
+
+	@Autowired
+	private HouseAuditStatusChangeMapper houseAuditStatusChangeMapper;
+	@Autowired
+	private HouseRentMapper houseRentMapper;
+	
+	/**
+	 * 新增申请房源变更
+	 * 
+	 * @param houseExploration
+	 * @param sessionVo
+	 * @return
+	 */
+	public ResultMsg saveHouseAuditStatusChange(HouseAuditStatusChange houseAuditStatusChange, SessionVo sessionVo) {
+		// 判断是否已经在审核列表中有未审核的
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("house_id", houseAuditStatusChange.getHouse_id());
+		List<HouseAuditStatusChange> list = houseAuditStatusChangeMapper.selectByHouseId(map);
+		if (list.size() > 0) {
+			return ResultMsg.createErrorMsg("已有房源状态申请正在审核中，请稍后申请。");
+		}
+		SysUser sysUser = sessionVo.getSysUser();
+		houseAuditStatusChange.initAduit(sysUser.getUser_id());
+		houseAuditStatusChangeMapper.insert(houseAuditStatusChange);
+		return ResultMsg.createOkMsg();
+	}
+
+	public ResultObjectMsg<PagingHelper<Map<String, String>>> selectHouseStatusChangeList(Map<String, Object> pageData,
+			SessionVo sessions) {
+		int page_num = ParameterUtil.getInt(pageData, "pageNumber", 1);
+		int page_size = ParameterUtil.getInt(pageData, "pageSize", 10);
+
+		SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+		if (null != sessionVo) {
+			SysUser sysUser = sessionVo.getSysUser();
+			pageData.put("current_city_code", sysUser.getCurrent_city_code());
+		}
+
+		PagingHelper<Map<String, String>> ph = new PagingHelper<Map<String, String>>();
+		ph.setPerPageSize(page_size);
+		ph.setCurrentPage(page_num);
+		pageData.put("begin_num", ph.getBeginRowNumber());
+		pageData.put("end_num", ph.getEndRowNumber());
+		List<Map<String, String>> list = houseAuditStatusChangeMapper.selectHouseStatusChangeList(pageData);
+		Integer count = houseAuditStatusChangeMapper.selectHouseStatusChangeListCount(pageData);
+
+		ph.setTotal(count); // 设置总的记录数
+		ph.setRows(list); // 设置返回的记录
+		return new ResultObjectMsg<PagingHelper<Map<String, String>>>(ph);
+
+	}
+
+	public ResultMsg deleteHouseExploration(Map<String, Object> pageData) {
+		String change_id = ParameterUtil.getString(pageData, "change_id", "");
+		houseAuditStatusChangeMapper.deleteHouseStatusChangeById(change_id);
+		return ResultMsg.createOkMsg();
+	}
+
+	public ResultMsg auditHouseStatusChange(Map<String, Object> pageData) {
+		House house = (House) pageData.get("house");
+		HouseRent houseRent = (HouseRent) pageData.get("houseRent");
+		SessionVo sessionVo = (SessionVo) pageData.get("sessionVo");
+		String change_id = house.getChange_id();
+		HouseAuditStatusChange hasc = houseAuditStatusChangeMapper.selectByChangeId(change_id);
+		if (hasc != null) {
+			hasc.setSave_change_status(houseRent.getNow_status());
+			hasc.setAudit_uid(sessionVo.getSysUser().getUser_id());
+			hasc.setAudit_date(DateUtil.getCurrentDateTimeAsString());
+			hasc.setAudit_remark(house.getAudit_content());
+			hasc.setAudit_status(DictConstants.AuditStatus.PASS.value());
+			hasc.setSave_change_status(houseRent.getHouse_status());
+			hasc.setUpdate_time(DateUtil.getCurrentDateTimeAsString());
+			hasc.setUpdate_uid(sessionVo.getSysUser().getUser_id());
+			if (houseRent.getHouse_status().equals(hasc.getNow_house_status())) {
+				// 未发生改变 则标记审核未通过
+				hasc.setAudit_status(DictConstants.AuditStatus.NO_PASS.value());
+			}else{
+				if(DictConstants.HouseStatus.INVALID.value().equals(hasc.getNow_house_status())
+					&&(DictConstants.HouseStatus.WAITING_RENT.value().equals(hasc.getApply_change_status())
+					||DictConstants.HouseStatus.NONRENTED.value().equals(hasc.getApply_change_status())
+					||DictConstants.HouseStatus.SELFUSE.value().equals(hasc.getApply_change_status())
+					  )
+				){
+					houseRent.setCultivation_uid(hasc.getCreate_uid());
+					houseRent.setCreate_time(hasc.getCreate_time());
+					
+				}
+				if(DictConstants.HouseStatus.WAITING_RENT.value().equals(hasc.getApply_change_status())
+						&&(DictConstants.HouseStatus.INVALID.value().equals(hasc.getNow_house_status())
+								||DictConstants.HouseStatus.NONRENTED.value().equals(hasc.getNow_house_status())
+								||DictConstants.HouseStatus.SELFUSE.value().equals(hasc.getNow_house_status())
+								  )){
+					houseRent.setActivated_uid(hasc.getCreate_uid());
+					houseRent.setActivated_time(DateUtil.getCurrentDateTimeAsString());
+				}
+			}
+			houseAuditStatusChangeMapper.updateHouseAuditStatusChangeById(hasc);
+			houseRentMapper.updateHouseRentRoles(houseRent);
+			
+			ResultMsg resultMsg=new ResultMsg();
+			resultMsg.setCode(0);
+			return resultMsg;
+		}
+		return ResultMsg.createErrorMsg("申请记录未找到");
+	}
+
+	public ResultObjectMsg<Map<String, String>> selectHouseStatusChange(Map<String, Object> pageData) {
+		ResultObjectMsg<Map<String, String>> r = new ResultObjectMsg<Map<String, String>>();
+		List<Map<String, String>> list = houseAuditStatusChangeMapper.selectHouseStatusChangeList(pageData);
+		if (list != null && list.size() > 0) {
+			r.setObj(list.get(0));
+		}
+		return r;
+	}
+}

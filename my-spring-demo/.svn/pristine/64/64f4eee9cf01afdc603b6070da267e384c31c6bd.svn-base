@@ -1,0 +1,73 @@
+package com.isz.erp.house.service.impl;
+
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.IszLogger;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.house.entity.ApplyPhoto;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.HouseAuditStatusChange;
+import com.isz.erp.facade.house.entity.HouseExploration;
+import com.isz.erp.facade.house.entity.HouseExplorationImg;
+import com.isz.erp.facade.house.entity.OnlineHouseInfo;
+import com.isz.erp.facade.house.service.HouseAuditStatusChangeService;
+import com.isz.erp.facade.house.service.HouseExplorationService;
+import com.isz.erp.facade.house.service.OnlineHouseService;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.biz.HouseAuditStatusChangeBiz;
+import com.isz.erp.house.biz.HouseExplorationServiceBiz;
+import com.isz.erp.house.biz.OnlineHouseServiceBiz;
+
+/**
+ * 实勘接口实现
+ *
+ * @author hjj 
+ * @version 1.0 *
+ * @date 创建时间：2016年7月7日 下午3:36:03
+ * @instruction 说明：
+ */
+@Service("houseAuditStatusChangeServiceFacade")
+public class HouseAuditStatusChangeServiceFacade implements HouseAuditStatusChangeService {
+
+    @Autowired
+    private HouseAuditStatusChangeBiz houseAuditStatusChangeBiz;
+
+	@Override
+	public ResultMsg saveHouseAuditStatusChange(
+			HouseAuditStatusChange houseAuditStatusChange, SessionVo sessionVo) {
+		return houseAuditStatusChangeBiz.saveHouseAuditStatusChange(houseAuditStatusChange, sessionVo);
+	}
+
+	@Override
+	public ResultObjectMsg<PagingHelper<Map<String, String>>> selectHouseStatusChangeList(Map<String, Object> pageData,
+			SessionVo sessions) {
+		// TODO Auto-generated method stub
+		return houseAuditStatusChangeBiz.selectHouseStatusChangeList(pageData, sessions);
+	}
+
+	@Override
+	public ResultMsg deleteHouseStatusChange(Map<String, Object> pageData) {
+		// TODO Auto-generated method stub
+		return houseAuditStatusChangeBiz.deleteHouseExploration(pageData);
+	}
+
+	@Override
+	public ResultMsg auditHouseStatusChange(Map<String, Object> pageData) {
+		// TODO Auto-generated method stub
+		return houseAuditStatusChangeBiz.auditHouseStatusChange(pageData);
+	}
+
+	@Override
+	public ResultObjectMsg<Map<String, String>> selectHouseStatusChange(Map<String, Object> pageData) {
+		return houseAuditStatusChangeBiz.selectHouseStatusChange(pageData);
+	}
+
+	
+	
+}

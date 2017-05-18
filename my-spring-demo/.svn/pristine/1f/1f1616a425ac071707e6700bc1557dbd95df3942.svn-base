@@ -1,0 +1,104 @@
+package com.isz.erp.service.resource.service.impl;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.ResultObjectMsg;
+import com.isz.erp.facade.house.entity.Residential;
+import com.isz.erp.house.service.impl.ResidentialServiceFacade;
+
+
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = { "classpath:spring/spring-context.xml" })
+public class ResidentialServiceFacadeTest {
+	@Autowired
+	private ResidentialServiceFacade residentialServiceFacade;
+	//@Test
+	public void testSearchResidentialList() {
+		Map<String,Object> data = new HashMap<String,Object>();
+		//ResultObjectMsg<PagingHelper<Residential>> ta = residentialServiceFacade.searchResidentialList(data);
+		System.out.println("--------------------------------------");
+	}
+
+	//@Test
+	public void testSaveResidential() {
+		System.out.println("保存方法--------开始------------");
+		/*List<Integer> img_id = new ArrayList<Integer>();
+		img_id.add(3);
+	
+		List<TtBusinessCircle> taBusinessCircleList = new ArrayList<TtBusinessCircle>();
+		TtBusinessCircle ttBusinessCircle1 = new TtBusinessCircle();
+		ttBusinessCircle1.setBusiness_circle_id(1);
+		TtBusinessCircle ttBusinessCircle2 = new TtBusinessCircle();
+		ttBusinessCircle2.setBusiness_circle_id(2);
+		taBusinessCircleList.add(ttBusinessCircle1);
+		//taBusinessCircleList.add(ttBusinessCircle2);
+		
+		List<TaDepart> taDepartList = new ArrayList<TaDepart>();
+		TaDepart taDepart1 = new TaDepart();
+		TaDepart taDepart2 = new TaDepart();
+		taDepart1.setDep_id(1);
+		taDepart2.setDep_id(2);
+		taDepartList.add(taDepart1);
+		//taDepartList.add(taDepart2);
+		
+		TtResidential taResidential = new TtResidential();
+		taResidential.setAddress("111");
+		taResidential.setArea_code("111");
+		taResidential.setBuild_area(12.00);
+		taResidential.setBuild_date("2009-09-09");
+		taResidential.setBus_stations("fdsfsdf");
+		taResidential.setCity_code("1");
+		taResidential.setGreen_rate(12);
+		taResidential.setImg_id(img_id);
+		taResidential.setLat("22");
+		taResidential.setLng("34");
+		taResidential.setMetro_stations("fs");
+		taResidential.setOther_info("fds");
+		taResidential.setParking_amount(12);
+		taResidential.setPlot_ratio(1);
+		taResidential.setProperty_company("123");
+		taResidential.setProperty_fee(123.00);
+		taResidential.setProperty_type("fsd");
+		taResidential.setProperty_use("fsd");
+		
+		taResidential.setRemark("fs");
+		taResidential.setResidential_name("楼盘2");
+		taResidential.setTaBusinessCircleList(taBusinessCircleList);
+		taResidential.setTaDepartList(taDepartList);
+		
+		TaUser taUser = new TaUser();
+		taUser.setUser_id(1);
+		try {
+			residentialServiceFacade.saveResidential(taResidential, taUser);
+		} catch (CException e) {
+			e.printStackTrace();
+		}*/
+		System.out.println("保存方法--------结束------------");
+	}
+
+	/*@Test
+	public void testDeleteResidential() {
+		//Integer residential_id = 16;
+	}*/
+
+	//@Test
+	public void getIntest() {//导入商圈 和商圈所在区域表
+		residentialServiceFacade.getIn();
+	}
+	@Test
+	public void getInResitest() {
+		residentialServiceFacade.getInResi();
+	}
+	
+	
+
+}

@@ -1,0 +1,373 @@
+package com.isz.erp.house.util;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import javax.net.ssl.SSLContext;
+
+import net.sf.json.JSONObject;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.RequestBuilder;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.mime.FormBodyPart;
+import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.content.StringBody;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.http.ssl.TrustStrategy;
+import org.apache.http.util.EntityUtils;
+import org.apache.log4j.Logger;
+
+public class HttpClientUtil {
+
+	private static Logger logger = Logger.getLogger(HttpClientUtil.class);
+	private static final String charset = "utf-8";
+
+	public static String get(String reqURL, Map<String, Object> params) {
+		return get(reqURL + getReqUrl(reqURL, params));
+	}
+
+	public static byte[] getStream(String reqURL) {
+		CloseableHttpClient httpclient = HttpClients.custom().build();
+		try {
+			HttpGet httpGet = new HttpGet(reqURL); // 创建org.apache.http.client.methods.HttpGet
+			RequestConfig requestConfig = RequestConfig.custom()
+					.setSocketTimeout(5000).setConnectTimeout(5000)
+					.setConnectionRequestTimeout(5000).build();
+			httpGet.setConfig(requestConfig);
+			CloseableHttpResponse response = httpclient.execute(httpGet);
+			try {
+				HttpEntity entity = response.getEntity(); // 获取响应实体
+				byte in2b[] = instreamToByte(entity.getContent());
+				return in2b;
+			} catch (IOException e) {
+				logger.error(e);
+			} finally {
+				response.close();
+			}
+		} catch (IOException e1) {
+			logger.error(e1);
+		} finally {
+			try {
+				httpclient.close();
+			} catch (IOException e) {
+				logger.error(e);
+			}
+		}
+		return null;
+	}
+
+	private static byte[] instreamToByte(InputStream input) throws IOException {
+		ByteArrayOutputStream swapStream = new ByteArrayOutputStream();
+		byte[] buff = new byte[4096];
+		int n = 0;
+		while (-1 != (n = input.read(buff))) {
+			swapStream.write(buff, 0, n);
+		}
+		byte[] in2b = swapStream.toByteArray();
+		return in2b;
+	}
+
+	public static String get(String reqURL) {
+		CloseableHttpClient httpclient = HttpClients.custom().build();
+		try {
+			HttpGet httpGet = new HttpGet(reqURL); // 创建org.apache.http.client.methods.HttpGet
+			RequestConfig requestConfig = RequestConfig.custom()
+					.setSocketTimeout(5000).setConnectTimeout(5000)
+					.setConnectionRequestTimeout(5000).build();
+			httpGet.setConfig(requestConfig);
+			CloseableHttpResponse response = httpclient.execute(httpGet);
+			try {
+				HttpEntity entity = response.getEntity(); // 获取响应实体
+				Charset respCharset = ContentType.getOrDefault(entity)
+						.withCharset(charset).getCharset();
+				return EntityUtils.toString(entity, respCharset);
+			} catch (IOException e) {
+				logger.error(e);
+			} finally {
+				response.close();
+			}
+		} catch (IOException e1) {
+			logger.error(e1);
+		} finally {
+			try {
+				httpclient.close();
+			} catch (IOException e) {
+				logger.error(e);
+			}
+		}
+		return null;
+	}
+
+	public static String postJson(String reqURL, Object param) {
+		SSLConnectionSocketFactory sslsf = null;
+		try {
+			SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(
+					null, new TrustStrategy() {
+						// 信任所有
+						public boolean isTrusted(X509Certificate[] chain,
+								String authType) throws CertificateException {
+							return true;
+						}
+					}).build();
+			sslsf = new SSLConnectionSocketFactory(sslContext);
+		} catch (KeyManagementException | NoSuchAlgorithmException
+				| KeyStoreException e) {
+			logger.fatal(e);
+			return null;
+		}
+		CloseableHttpClient httpclient = HttpClients.custom()
+				.setSSLSocketFactory(sslsf).build();
+		try {
+			RequestBuilder builder = RequestBuilder.post(reqURL);
+			if (param != null) {
+				StringEntity stringEntity = new StringEntity(JSONObject
+						.fromObject(param).toString(), charset);
+				builder.setEntity(stringEntity);
+			}
+			HttpUriRequest post = builder.build();
+			CloseableHttpResponse response = httpclient.execute(post);
+			try {
+				HttpEntity entity = response.getEntity();
+				Charset respCharset = ContentType.getOrDefault(entity)
+						.withCharset(charset).getCharset();
+				String result = EntityUtils.toString(entity, respCharset);
+				EntityUtils.consume(entity);
+				return result;
+			} finally {
+				response.close();
+			}
+		} catch (IOException e) {
+			logger.error(e);
+		} finally {
+			try {
+				httpclient.close();
+			} catch (IOException e) {
+				logger.error(e);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * https get请求
+	 * 
+	 * @param reqURL
+	 * @param param
+	 * @return String
+	 */
+	public static String getHttps(String reqURL, Map<String, Object> params) {
+		CloseableHttpClient httpclient = createSSLClientDefault();
+		HttpGet httpget = new HttpGet(reqURL + getReqUrl(reqURL, params));
+		String result = "";
+		try {
+			CloseableHttpResponse response = httpclient.execute(httpget);
+			logger.info("响应状态码: "
+					+ response.getStatusLine().getStatusCode());
+			HttpEntity entity = response.getEntity();
+			result = EntityUtils.toString(entity, "utf-8");
+			EntityUtils.consume(entity);
+		} catch (Exception e) {
+			logger.info(e.getMessage());
+		} finally {
+			httpget.releaseConnection();
+		}
+		return result;
+	}
+
+	/**
+	 * 转换get请求的参数串
+	 * 
+	 * @param reqURL
+	 * @param params
+	 * @return String
+	 */
+	private static String getReqUrl(String reqURL, Map<String, Object> params) {
+		String queryString = "";
+		if (!StringUtils.contains(reqURL, "?")) {
+			queryString += "?";
+		}
+		for (Entry<String, Object> entry : params.entrySet()) {
+			queryString += ("&" + entry.getKey()) + "="
+					+ (String.valueOf(entry.getValue()));
+		}
+		queryString = queryString.replace("?&", "?");
+		return queryString;
+	}
+
+	/**
+	 * 创建信任所有证书的HttpClient
+	 * 
+	 * @return CloseableHttpClient
+	 */
+	public static CloseableHttpClient createSSLClientDefault() {
+		try {
+			SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(
+					null, new TrustStrategy() {
+						// 信任所有
+						public boolean isTrusted(X509Certificate[] chain,
+								String authType) throws CertificateException {
+							return true;
+						}
+					}).build();
+			SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
+					sslContext);
+			return HttpClients.custom().setSSLSocketFactory(sslsf).build();
+		} catch (KeyManagementException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		return HttpClients.createDefault();
+	}
+
+	public static String postForm(String reqURL, Map<String, Object> params) {
+		//CloseableHttpClient httpclient = HttpClients.custom().build();
+		CloseableHttpClient httpclient = createSSLClientDefault();
+		try {
+			RequestBuilder builder = RequestBuilder.post(reqURL);
+			builder.setCharset(Charset.forName("utf-8"));
+			MultipartEntity httpEntity = new MultipartEntity();
+			if (params != null) {
+				for (Entry<String, Object> entry : params.entrySet()) {
+					FormBodyPart formBodyPart = new FormBodyPart(
+							entry.getKey(), new StringBody(String.valueOf(entry
+									.getValue()), "text/plain",
+									Charset.forName("utf-8")));
+					httpEntity.addPart(formBodyPart);
+				}
+			}
+			builder.setEntity(httpEntity);
+			HttpUriRequest post = builder.build();
+			CloseableHttpResponse response = httpclient.execute(post);
+			try {
+				HttpEntity entity = response.getEntity();
+				Charset respCharset = ContentType.getOrDefault(entity)
+						.withCharset(charset).getCharset();
+				String result = EntityUtils.toString(entity, respCharset);
+				EntityUtils.consume(entity);
+				return result;
+			} finally {
+				response.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			logger.error(e);
+		} finally {
+			try {
+				httpclient.close();
+			} catch (IOException e) {
+				logger.error(e);
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * 百度API调用
+	 * 
+	 * @param reqURL
+	 * @param idserviceKey
+	 * @return String
+	 */
+	public static String getBaiduApi(String reqURL, String idserviceKey) {
+		CloseableHttpClient httpclient = HttpClients.custom().build();
+		try {
+			HttpGet httpGet = new HttpGet(reqURL); // 创建org.apache.http.client.methods.HttpGet
+			RequestConfig requestConfig = RequestConfig.custom()
+					.setSocketTimeout(5000).setConnectTimeout(5000)
+					.setConnectionRequestTimeout(5000).build();
+			httpGet.setConfig(requestConfig);
+			httpGet.setHeader("apikey", idserviceKey);
+			CloseableHttpResponse response = httpclient.execute(httpGet);
+			try {
+				HttpEntity entity = response.getEntity(); // 获取响应实体
+				Charset respCharset = ContentType.getOrDefault(entity)
+						.withCharset(charset).getCharset();
+				return EntityUtils.toString(entity, respCharset);
+			} catch (IOException e) {
+				logger.error(e);
+			} finally {
+				response.close();
+			}
+		} catch (IOException e1) {
+			logger.error(e1);
+		} finally {
+			try {
+				httpclient.close();
+			} catch (IOException e) {
+				logger.error(e);
+			}
+		}
+		return null;
+	}
+	
+	public static void main(String[] args) {
+		String rString =postJson("http://qac.ishangzu.com/api/saave", "{\"agentCredentialsNum\":\"\",\"agentEmail\":\"\",\"agentName\":\"\",\"belongEid\":48,\"birthStr\":\"1990-05-21\",\"birth\":\"1990-05-21\",\"cellPhone\":\"13685789550\",\"customerType\":1,\"eid\":48,\"email\":\"hah620@163.com\",\"gender\":1,\"idcardNum\":\"341224199005214115\",\"realname\":\"韩\",\"status\":1,\"uid\":48}");
+		System.out.println(rString);
+	}
+	
+	/**
+	 * 请求
+	 * 
+	 * @param reqURL 请求URL
+	 * @param jsonStr json参数
+	 * @return
+	 */
+	public static String postJson(String reqURL, String jsonStr) {
+		CloseableHttpClient httpclient = HttpClients.custom().build();
+		try {
+			RequestBuilder builder = RequestBuilder.post(reqURL);
+			builder.setCharset(Charset.forName("utf-8"));
+			StringEntity stringEntity = new StringEntity(jsonStr, "utf-8");
+			stringEntity.setContentEncoding("UTF-8");
+			stringEntity.setContentType("application/json"); 
+			builder.setEntity(stringEntity);
+			HttpUriRequest post = builder.build();
+			CloseableHttpResponse response = httpclient.execute(post);
+			try {
+				HttpEntity entity = response.getEntity();
+				String result = EntityUtils.toString(entity, "utf-8");
+				EntityUtils.consume(entity);
+				return result;
+			} finally {
+				response.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			logger.error(e);
+		} finally {
+			try {
+				httpclient.close();
+			} catch (IOException e) {
+				logger.error(e);
+			}
+		}
+		return null;
+	}
+
+}

@@ -1,0 +1,33 @@
+package com.isz.erp.house.mapper;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.house.entity.OnlineHouseInfo;
+
+/**
+ * 官网发布公寓
+ *
+ * @author hjj
+ * @version 1.0 *
+ * @date 创建时间：2016年7月7日 下午4:25:02
+ * @instruction 说明：
+ */
+public interface OnlineHouseInfoMapper extends Mapper<OnlineHouseInfo> {
+
+	
+	   /**
+     * 根据自营公寓ID返回发布房源信息
+     *
+     * @param apartmentId
+     * @return
+     */
+    public OnlineHouseInfo selectOnlineHouseInfoDetail(String apartmentId);
+    
+    /**
+     * 根据自营公寓ID返回发布房源信息
+     *
+     * @param apartmentId
+     * @return
+     */
+    public OnlineHouseInfo selectOnlineBaseHouseInfoDetail(String houseId);
+}

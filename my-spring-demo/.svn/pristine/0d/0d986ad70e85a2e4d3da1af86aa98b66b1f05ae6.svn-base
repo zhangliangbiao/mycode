@@ -1,0 +1,161 @@
+package com.isz.erp.house.service.impl;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.isz.erp.common.util.DateUtil;
+import com.isz.erp.common.util.ResultMsg;
+import com.isz.erp.common.util.UuidUtil;
+import com.isz.erp.facade.house.entity.ApartmentCount;
+import com.isz.erp.facade.house.entity.ApartmentCountRented;
+import com.isz.erp.facade.house.service.ApartmentLogService;
+import com.isz.erp.facede.bzlog.entity.ApartmentLog;
+import com.isz.erp.facede.bzlog.service.ApartmentLogerService;
+import com.isz.erp.house.biz.ApartmentLogServiceBiz;
+
+/**
+ * 自营公寓接口实现
+ *
+ * @author lws * luwenshan@ishangzu.com
+ * @version 1.0 *
+ * @date 创建时间：2016年1月22日 下午6:17:03
+ * @instruction 说明：
+ */
+@Service("apartmentLogServiceFacade")
+public class ApartmentLogServiceFacade implements ApartmentLogService {
+    
+    @Autowired
+    private ApartmentLogServiceBiz apartmentLogServiceBiz;
+    @Autowired
+	private ApartmentLogerService apartmentLogerService;
+
+	@Override
+	public ResultMsg searchApartmentAll() {
+		 // TODO Auto-generated method stub
+	      Integer count = 0;
+	      int limit = 500; // 每次获取条数
+	      int offset = 0;// 下一个开始条数
+	      apartmentCount();
+	      apartmentCountRented("ENTIRE");
+	      apartmentCountRented("SHARE");
+	      Map<String, Object> params = new HashMap<String, Object>();
+	      count = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+	      do {
+	          params.put("limit", limit);
+	          params.put("offset", offset);
+	          List<ApartmentLog> apartments = apartmentLogServiceBiz.searchApartmentListByLog(params);
+	          apartmentLogerService.insertAllLoger(apartments);
+	          offset += limit;
+	
+	      } while (count > offset);
+	      return ResultMsg.createOkMsg();
+	}
+	
+	public void apartmentCount(){
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("rent_status", "RENTED");
+		params.put("rent_type", "ENTIRE");
+		Integer entire_rented = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		params.put("rent_status", "BOOKED");
+		Integer entire_booked = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		params.put("rent_status", "WAITING_RENT");
+		Integer entire_warting_rent = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		params.put("rent_status", "INVALID");
+		Integer entire_invalid = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		ApartmentCount apartmentCount = apartmentLogServiceBiz.selectPreDayApartment();
+		Integer pre_entire_invalid = apartmentCount.getEntire_all_invalid();
+		if(pre_entire_invalid != null)
+			entire_invalid = entire_invalid - pre_entire_invalid;
+		params.put("rent_status", "");
+		params.put("fire_status", "FIRED");
+		Integer entire_fired = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		params.put("fire_status", "BURNING");
+		Integer entire_burnting = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		
+		
+		params.put("rent_status", "RENTED");
+		params.put("rent_type", "SHARE");
+		params.put("fire_status", "");
+		Integer share_rented = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		params.put("rent_status", "BOOKED");
+		Integer share_booked = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		params.put("rent_status", "WAITING_RENT");
+		Integer share_warting_rent = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		params.put("rent_status", "INVALID");
+		Integer share_invalid = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		Integer pre_share_invalid = apartmentCount.getShare_all_invalid();
+		if(pre_share_invalid != null)
+			share_invalid = share_invalid - pre_share_invalid;
+		params.put("rent_status", "");
+		params.put("fire_status", "FIRED");
+		Integer share_fired = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		params.put("fire_status", "BURNING");
+		Integer share_burnting = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		
+		ApartmentCount insertApartmentCount = new ApartmentCount();
+		insertApartmentCount.setId(UuidUtil.getUUID());
+		insertApartmentCount.setEntire_rented(entire_rented);
+		insertApartmentCount.setEntire_booked(entire_booked);
+		insertApartmentCount.setEntire_warting_rent(entire_warting_rent);
+		insertApartmentCount.setEntire_fired(entire_fired);
+		insertApartmentCount.setEntire_burnting(entire_burnting);
+		insertApartmentCount.setEntire_invalid(entire_invalid);
+		insertApartmentCount.setEntire_all_invalid(entire_invalid + pre_entire_invalid);
+		insertApartmentCount.setShare_rented(share_rented);
+		insertApartmentCount.setShare_booked(share_booked);
+		insertApartmentCount.setShare_warting_rent(share_warting_rent);
+		insertApartmentCount.setShare_fired(share_fired);
+		insertApartmentCount.setShare_burnting(share_burnting);
+		insertApartmentCount.setShare_invalid(share_invalid);
+		insertApartmentCount.setShare_all_invalid(share_invalid + pre_share_invalid);
+		insertApartmentCount.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+		apartmentLogServiceBiz.insertApartmentCount(insertApartmentCount);
+		 
+	}
+	
+	public void apartmentCountRented(String rent_type){
+		Map<String, Object> params = new HashMap<String, Object>();
+		 params = new HashMap<String, Object>();
+		 params.put("rent_type", rent_type);
+		 params.put("rent_status", "RENTED");
+		 params.put("category","CUSTOM_INRENT" );
+		 Integer custom_inrent = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		 params.put("category","CUSTOM_RELET" );
+		 Integer custom_booked = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		 params.put("category","WILLEXPIRED" );
+		 Integer custom_warting_rent = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		 params.put("category","" );
+		 params.put("dealtype", "NOT_RENEW_BUT_CAN_SEE");
+		 Integer not_renew_but_can_see = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		 params.put("dealtype", "NOT_RENEW_AND_NOT_SEE");
+		 Integer not_renew_and_not_see = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		 params.put("dealtype", "TO_RENEW");
+		 Integer to_renew = apartmentLogServiceBiz.searchApartmentListCountByLog(params);
+		 ApartmentCountRented apartmentCountRented = setApartmentCountRented(
+				 custom_inrent,custom_booked,custom_warting_rent,not_renew_but_can_see
+				 ,not_renew_and_not_see,to_renew,rent_type);
+		 apartmentLogServiceBiz.insertApartmentCountRented(apartmentCountRented);
+		
+	}
+	public ApartmentCountRented setApartmentCountRented(Integer custom_inrent,
+			Integer custom_booked,Integer custom_warting_rent,Integer not_renew_but_can_see,
+			Integer not_renew_and_not_see,Integer to_renew,String rent_type
+			){
+		ApartmentCountRented apartmentCountRented = new ApartmentCountRented();
+		apartmentCountRented.setId(UuidUtil.getUUID());
+		apartmentCountRented.setCustom_inrent(custom_inrent);
+		apartmentCountRented.setCustom_booked(custom_booked);
+		apartmentCountRented.setCustom_warting_rent(custom_warting_rent);
+		apartmentCountRented.setNot_renew_and_not_see(not_renew_and_not_see);
+		apartmentCountRented.setNot_renew_but_can_see(not_renew_but_can_see);
+		apartmentCountRented.setTo_renew(to_renew);
+		apartmentCountRented.setRent_type(rent_type);
+		apartmentCountRented.setCreate_time(DateUtil.getCurrentDateTimeAsString());
+		return apartmentCountRented;
+	}
+}
+

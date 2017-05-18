@@ -1,0 +1,16 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseExplorationImg;
+
+/**
+ * @author hjj *
+ * @version 1.0 *
+ * @date 创建时间：2016年10月27日 下午11:01:08 *
+ * @instruction 说明：
+ */
+public interface HouseExplorationImgMapper extends Mapper<HouseExplorationImg> {
+	public List<HouseExplorationImg> selectHouseExplorationImgList(String house_exploration_id);
+}

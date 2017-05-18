@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.HouseContractVoMapper">
+	<!-- 符合条件数据列表 -->
+	<select id="searchHouseContractVoList" parameterType="java.util.HashMap" resultType="com.isz.erp.facade.house.vo.HouseContractVo">
+		SELECT
+		hc.contract_id,
+		hc.contract_num,
+		hc.contract_type,
+		h.house_code,
+		h.house_id,
+		hc.city_code,
+		sd1.`name` city_name,
+		hc.area_code,
+		sd2.`name` area_name,
+		CONCAT_WS('',r.residential_name,CONCAT_WS('',rb.building_name,d.dict_value,CASE h.unit WHEN '无' THEN '' ELSE IFNULL(h.unit,'') END),h.house_no,'室') property_address_detail,
+		h.build_area,
+		hc.sign_date,
+		CONCAT_WS('~',hc.fitment_start_date,hc.fitment_end_date) fitment_date,
+		hc.reform_way,
+		GROUP_CONCAT(hcl.landlord_name) landlord_name,
+		GROUP_CONCAT(hcl.phone) phone,
+		hc.sign_uid,
+		su1.user_name sign_user_name,
+		su1.user_phone sign_user_phone,
+		fh.fitment_uid,
+		su2.user_name fitment_user_name,
+		fh.fitment_status,
+		hc.apartment_type,
+		hc.entrust_type,
+		fh.fitment_id,
+		h.rooms,
+		h.livings,
+		h.kitchens,
+		h.bathrooms,
+		h.balconys,
+		hc.create_time,
+		hc.update_time,
+		hc.is_active,
+		hc.contract_status,
+		hc.parent_id,
+		fh.total_cost,
+		su1.dep_id sign_did,
+		fh.set_delivery_date
+		<include refid="countSearchHousesql"></include>
+		<if test="null != sort and sort != ''">
+			ORDER BY ${sort}
+			<if test="null != order and order != ''">
+				${order}
+			</if>
+		</if>
+	</select>	
+	<!-- 符合条件的数据记录总数 -->
+	<select id="countSearchHouseContractVo" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		SELECT COUNT(1) FROM (SELECT hc.contract_id
+		<include refid="countSearchHousesql"></include>) hc_table
+	</select>
+	
+	<sql id="countSearchHousesql">
+		FROM house_contract hc
+		LEFT JOIN house h ON h.house_id=hc.house_id
+		LEFT JOIN sys_district sd1 ON sd1.`code`=hc.city_code
+		LEFT JOIN sys_district sd2 ON sd2.`code`=hc.area_code
+		LEFT JOIN residential r ON h.residential_id=r.residential_id
+		LEFT JOIN residential_building rb ON h.building_id=rb.building_id
+		LEFT JOIN sys_dict_item d ON rb.suffix = d.dict_key AND d.dict_code='Suffix'
+		LEFT JOIN house_contract_landlord hcl ON hcl.contract_id=hc.contract_id
+		LEFT JOIN sys_user su1 ON su1.user_id=hc.sign_uid
+		LEFT JOIN fitment_house fh ON fh.contract_id=hc.contract_id
+		LEFT JOIN sys_user su2 ON su2.user_id=fh.fitment_uid
+		<include refid="listSql"></include>
+	</sql>
+	<!-- 列表查询条件 -->
+	<sql id="listSql">
+		<where>
+			<trim prefixOverrides="and">
+				AND h.deleted=0 AND hc.deleted=0 AND hc.reform_way IS NOT NULL
+				<if test="city_code_search != null and '' !=  city_code_search">
+					and h.city_code IN (${city_code_search})
+				</if>
+				<if test="null != area_code_search">and h.area_code in (${area_code_search})</if>
+				<if test="null != entrust_type and '' != entrust_type">AND entrust_type=#{entrust_type}</if>
+				<if test="null != apartment_type and '' != apartment_type">
+					AND apartment_type=#{apartment_type}
+				</if>
+				<!--<if test="null != apartment_type and 'BRAND' == apartment_type">-->
+					<!--AND hc.reform_way != 'UNRRESTYLE'-->
+				<!--</if>-->
+				<if test="null != residential_contract_num_name_search and '' != residential_contract_num_name_search">
+					AND (
+						r.`residential_name` like CONCAT('%','${residential_contract_num_name_search}','%' )
+						OR hc.`contract_num` like CONCAT('%','${residential_contract_num_name_search}','%' )
+						OR r.byname like CONCAT('%','${residential_contract_num_name_search}','%' )
+						OR r.address like CONCAT('%','${residential_contract_num_name_search}','%' )
+					)
+				</if>
+				<if test="null != residential_name_search and '' != residential_name_search">
+					AND (
+						h.house_code like CONCAT('%','${residential_name_search}','%' )
+						OR r.`residential_name` like CONCAT('%','${residential_name_search}','%' )
+						OR r.byname like CONCAT('%','${residential_name_search}','%' )
+					)
+				</if>
+				<if test="null != contract_num_search and '' != contract_num_search">
+					AND hc.`contract_num` like CONCAT('%','${contract_num_search}','%' )
+				</if>
+				<if test="null != building_name_search and '' != building_name_search">AND rb.building_name like CONCAT('%','${building_name_search}','%' )</if>
+				<if test="null != unit_search and '' != unit_search">AND h.unit like CONCAT('%','${unit_search}','%' )</if>
+				<if test="null != house_no_search and '' != house_no_search">AND h.house_no like CONCAT('%','${house_no_search}','%' )</if>
+				<if test="null != sign_date_start_search and '' != sign_date_start_search"><![CDATA[AND date(hc.sign_date) >= #{sign_date_start_search}]]></if>
+				<if test="null != sign_date_end_search and '' != sign_date_end_search"><![CDATA[AND date(hc.sign_date) <= #{sign_date_end_search}]]></if>
+				<if test="null != sign_uid_search and '' != sign_uid_search">AND hc.sign_uid in (${sign_uid_search})</if>
+				<if test="null != sign_user_name_search and '' != sign_user_name_search">AND su1.user_name like CONCAT('%','${sign_user_name_search}','%' )</if>
+				<if test="null != reform_way_search and '' != reform_way_search">AND hc.reform_way in (${reform_way_search})</if>
+				<if test="null != fitment_uid_search">AND fh.fitment_uid in (${fitment_uid_search})</if>
+				<if test="null != fitment_status_search and '' != fitment_status_search">
+					AND (
+						fh.fitment_status in (${fitment_status_search})
+						<if test="null != wait_design_search and '' != wait_design_search">
+							OR fh.fitment_status IS NULL OR fh.fitment_status = ''
+						</if>
+					)
+				</if>
+				<!-- 数据权限 -->
+				<if test="null != permValue and '' != permValue">
+					and
+					(
+						hc.sign_uid  in (${permValue})
+					<if test="null != deptValue">
+						or (su1.dep_id in (${deptValue}))
+					</if>
+					)
+				</if>
+				<if test="null == permValue and null != deptValue">
+					and (su1.dep_id in (${deptValue}))
+				</if>
+			</trim>
+		</where>
+		GROUP BY hc.contract_id
+	</sql>
+	<!-- 委托合同详情 -->
+	<select id="selectByContractId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.vo.HouseContractVo">
+		SELECT 
+			hc.contract_id,
+			hc.house_id,
+			hc.reform_way,
+			hc.is_active,
+			hc.contract_num,
+			hc.apartment_type,
+			hc.contract_type,
+			hc.entrust_type,
+			hc.sign_date,
+			su.dep_id sign_did,
+			hc.sign_uid,
+			hc.fitment_start_date,
+			hc.fitment_end_date,
+			hc.rental_price,
+			hc.server_manage_did,
+			hc.server_manage_uid,
+			hc.is_active,
+			hc.contract_status,
+			hc.parent_id,
+			hc.entrust_start_date,
+			hc.entrust_end_date,
+			hc.real_due_date,
+			fh.fitment_id
+		FROM 
+			house_contract hc
+			LEFT JOIN sys_user su ON su.user_id=hc.sign_uid
+			LEFT JOIN fitment_house fh ON hc.contract_id=fh.contract_id
+		WHERE
+			hc.contract_id=#{contract_id}
+	</select>
+	<!-- 查询上一条数据 -->
+	<select id="selectPreByHouseIdAndContractId" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.vo.HouseContractVo">
+		SELECT
+			hc.contract_id,
+			hc.house_id,
+			hc.reform_way,
+			hc.is_active,
+			hc.contract_num,
+			hc.apartment_type,
+			hc.contract_type,
+			hc.entrust_type,
+			hc.sign_date,
+			su.dep_id sign_did,
+			hc.sign_uid,
+			hc.fitment_start_date,
+			hc.fitment_end_date,
+			hc.rental_price,
+			hc.is_active,
+			hc.contract_status
+		 FROM house_contract hc
+		 LEFT JOIN sys_user su ON su.user_id=hc.sign_uid
+		 WHERE
+		 	hc.contract_id = (SELECT contract_id FROM house_contract WHERE house_id=#{house_id} <![CDATA[AND contract_id <> #{contract_id}]]>
+		 		ORDER BY create_time DESC LIMIT 1
+		 	)
+	</select>
+	<!-- 公寓相关 有效或未生效 -->
+	<select id="selectByHouseId" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.vo.ApartmentHouseContractVo">
+		SELECT
+			hc.contract_id,
+			hc.house_id,
+			hc.is_active,
+			hc.contract_num,
+			hc.entrust_start_date,
+			hc.entrust_end_date,
+			hc.delay_date,
+			hc.remark
+		 FROM house_contract hc
+		 WHERE 
+		 	hc.house_id=#{house_id} <![CDATA[AND CURDATE() <= DATE(real_due_date)]]>
+		 	AND hc.deleted=0
+	</select>
+	<!-- 公寓相关 收房信息列表-->
+	<select id="selectApartmentHouseContractList" parameterType="java.lang.String" resultType="com.isz.erp.facade.house.vo.ApartmentHouseContractVo">
+		SELECT
+			su.user_name,
+			sd.dep_name,
+			hc.create_time,
+			hc.sign_date,
+			hc.contract_id,
+			hc.house_id,
+			hc.is_active,
+			hc.contract_num,
+			hc.entrust_start_date,
+			hc.entrust_end_date,
+			hc.delay_date,
+			hc.remark,
+			hc.contract_status
+		 FROM house_contract hc
+		 	LEFT JOIN sys_user su ON hc.sign_uid=su.user_id
+		 	LEFT JOIN sys_department sd ON hc.sign_did=sd.dep_id
+		 WHERE 
+		 	hc.house_id=#{house_id}	AND hc.deleted=0
+		 ORDER BY hc.create_time DESC
+	</select>
+	<!-- 公寓相关 收房信息列表总数-->
+	<select id="countApartmentHouseContract" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT count(1)
+		FROM house_contract hc
+		 	LEFT JOIN sys_user su ON hc.sign_uid=su.user_id
+		 	LEFT JOIN sys_department sd ON hc.sign_did=sd.dep_id
+		 WHERE 
+		 	hc.house_id=#{house_id}	AND hc.deleted=0
+	</select>
+	<!-- 更新委托合同的装修相关字段 -->
+	<update id="updateHouseContractFitment" parameterType="java.util.Map">
+		update house_contract 
+			set 
+				reform_way=#{reform_way}, 
+				update_time=#{update_time},
+				update_uid=#{update_uid}
+		where contract_id=#{contract_id}
+	</update>
+</mapper> 

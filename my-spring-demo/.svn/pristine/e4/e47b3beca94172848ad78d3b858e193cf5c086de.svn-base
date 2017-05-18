@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.OnlineHouseMapper">
+	<!-- resultMap -->
+	<resultMap id="HouseBaseMap" type="com.isz.erp.facade.house.entity.House">
+	    <id column="house_id" property="house_id"/>
+	    <result column="residential_id" property="residential_id"/>
+	    <result column="building_id" property="building_id"/>
+	    <result column="city_code" property="city_code"/>
+	    <result column="area_code" property="area_code"/>
+	    <result column="house_code" property="house_code"/>
+	    <result column="right_num" property="right_num"/>
+	    <result column="unit" property="unit"/>
+	    <result column="floor" property="floor"/>
+	    <result column="house_no" property="house_no"/>
+	    <result column="rooms" property="rooms"/>
+	    <result column="livings" property="livings"/>
+	    <result column="kitchens" property="kitchens"/>
+	    <result column="bathrooms" property="bathrooms"/>
+	    <result column="balconys" property="balconys"/>
+	    <result column="build_area" property="build_area"/>
+	    <result column="orientation" property="orientation"/>
+	    <result column="property_type" property="property_type"/>
+	    <result column="property_use" property="property_use"/>
+	    <result column="property_right" property="property_right"/>
+	    <result column="fitment_type" property="fitment_type"/>
+	    <result column="remark" property="remark"/>
+	    <result column="deleted" property="deleted"/>
+	    <result column="create_time" property="create_time"/>
+	    <result column="create_uid" property="create_uid"/>
+	    <result column="update_time" property="update_time"/>
+	    <result column="update_uid" property="update_uid"/>
+	    <!-- 关联信息 -->
+		<result column="house_status" property="house_status"/>
+	    <result column="rental_price" property="rental_price"/>
+	    <result column="activated_time" property="activated_time"/>
+	    <result column="look_date" property="look_date"/>
+	    <result column="look_type" property="look_type"/>
+	 	<result column="residential_name" property="residential_name"/>
+	    <result column="building_name" property="building_name"/>
+	 	<result column="city_name" property="city_name"/>
+	    <result column="area_name" property="area_name"/>
+	 	<result column="dep_name" property="dep_name"/>
+	    <result column="user_name" property="user_name"/>
+	    <result column="image_times" property="image_times"/>
+	    <result column="entrust_type" property="entrust_type"/>
+	    <result column="entrust_times" property="entrust_times"/>
+	    <result column="follow_date" property="follow_date"/>
+	    
+	    <result column="business_circle_multi" property="business_circle_multi"/>
+	    <result column="rooms_config" property="rooms_config"/>
+	    <result column="create_user_name" property="create_user_name"/>
+	    <result column="update_user_name" property="update_user_name"/>
+	    <result column="suffix" property="suffix"/>
+
+		<result column="floor_floors" property="floor_floors"/>
+
+	    <!-- 楼盘 -->
+	    <association property="residential" column="residential_id" select="com.isz.erp.house.mapper.ResidentialMapper.selectByResidentialId">
+	    </association>
+	    <!-- 栋座 -->
+	    <association property="residentialBuilding" column="building_id" select="com.isz.erp.house.mapper.ResidentialBuildingMapper.selectResidentialBuildingDetail">
+	    </association>
+	    <!-- 出租信息 -->
+	    <association property="houseRent" column="house_id" select="com.isz.erp.house.mapper.HouseRentMapper.selectByHouseId">
+	    </association>
+	    <!-- 配套设施 -->
+	    <collection property="houseConfigurationList" column="house_id" select="com.isz.erp.house.mapper.HouseConfigurationMapper.selectListByHouseId">
+	 	</collection>
+	 	<!-- 图片 -->
+	 	<collection property="houseImgList" column="house_id" select="com.isz.erp.house.mapper.HouseImgMapper.selectListByHouseId">
+	 	</collection>
+	 	<!-- 楼盘房屋联系人 -->
+	 	<collection property="houseLinkmanList" column="house_id" select="com.isz.erp.house.mapper.HouseLinkmanMapper.selectListByHouseId">
+	 	</collection>
+ 	</resultMap>
+ 	
+	<!-- 根据楼盘id判断出租房源是否用了楼盘字典 -->
+	<select id="checkIsUseRedidential" parameterType="java.util.Map" resultType="java.lang.Integer">
+	   SELECT count(a.house_id) FROM house a
+	   WHERE a.deleted = 0
+       <if test="residential_id != '' and residential_id != null ">
+			AND a.residential_id = #{residential_id}
+	   </if>	   
+       <if test="building_id != '' and building_id != null ">
+			AND a.building_id = #{building_id}
+	   </if>	   
+	   
+	</select>
+	
+	<!-- 插入一条房屋信息 -->
+	<insert id="insertHouse" parameterType="com.isz.erp.facade.house.entity.House">
+		INSERT INTO `house` 
+			(`house_id`,`residential_id`, `building_id`, `city_code`, `area_code`, `house_code`, `unit`, `floor`,
+			`house_no`, `rooms`, `livings`, `kitchens`, `bathrooms`, `balconys`, `build_area`, `orientation`, `property_type`, `property_use`, 
+			`property_right`, `fitment_type`, `remark`, `deleted`, `create_time`, `create_uid`, `update_time`, `update_uid`) 
+		VALUES 
+			(#{house_id},#{residential_id}, #{building_id}, #{city_code}, #{area_code}, #{house_code}, #{unit}, #{floor},
+			#{house_no}, #{rooms}, #{livings}, #{kitchens}, #{bathrooms}, #{balconys}, #{build_area}, #{orientation}, #{property_type}, #{property_use}, 
+			#{property_right}, #{fitment_type}, #{remark}, #{deleted}, now(), #{create_uid}, now(), #{update_uid})
+		
+	</insert>
+	
+	<update id="updateHouseFromGeneralContract" parameterType="map">
+		update house t set t.build_area=#{build_area},t.update_uid=#{update_uid},t.right_num=#{right_no},t.update_time=now() where t.house_id=#{house_id}
+	</update>
+	
+	<!-- 符合查询 条件的房屋信息 -->
+	<select id="searchHouseList" parameterType="java.util.Map" resultMap="HouseBaseMap">
+		SELECT 
+
+
+		h.house_id as id,
+				h.house_id,
+					h.residential_id,
+					h.building_id,
+					h.city_code,
+					h.area_code,
+					h.house_code,
+					h.unit,
+				
+						h.floor,
+						rb.underground_floors , rb.ground_floors,
+					h.house_no,
+					h.rooms,
+					h.livings,
+					h.kitchens,
+					h.bathrooms,
+					h.balconys,
+					h.build_area,
+					h.orientation,
+					h.property_type,
+					h.property_use,
+					h.property_right,
+					h.fitment_type,
+					h.remark,
+					h.deleted,
+					h.create_time,
+					h.create_uid,
+					h.update_time,
+					h.update_uid,
+					hr.house_status,
+					hr.rental_price,
+					hr.activated_time,
+					hr.look_date,
+					hr.look_type,
+					su.dep_id as belong_did,
+					hr.belong_uid,
+					hr.source,
+					r.residential_name,
+					r.byname,
+
+					d.dict_value,
+					sdt1. NAME city_name,
+					sdt2. NAME area_name,
+					sd.dep_name,
+					su.user_name,
+					rb.suffix suffix,
+					su2.user_name create_user_name,
+				    CONCAT_WS('',
+							CASE rb.building_name
+							WHEN '无' THEN ''
+							ELSE IFNULL(rb.building_name,'')
+							END ,
+							CASE d.dict_value
+							WHEN '无' THEN ''
+							ELSE IFNULL(d.dict_value,'')
+							END) building_name,
+				            CONCAT(h.floor,'|',rb.underground_floors+rb.ground_floors) as floor_floors
+				            ,CONCAT_WS('-',h.rooms,h.livings,h.kitchens,h.bathrooms,h.balconys) rooms_config
+					,
+                    
+                    (SELECT count(house_img_id) as image_times
+							FROM house_img 
+							WHERE  deleted=0 
+                            and house_id=h.house_id)    as image_times,
+					
+					hc.entrust_times,
+					hc.create_time AS entrust_date,
+					hc.entrust_type,
+					(
+						SELECT
+							MAX(f.follow_date) as follow_date
+						FROM
+							follow f
+						WHERE
+						f.object_type = 'HOUSE'
+						AND f.deleted = 0
+                        and f.object_id = h.house_id
+					) as follow_date,
+					(
+						SELECT
+							GROUP_CONCAT(bc.business_circle_name) as business_circle_names
+						FROM
+							business_circle bc
+						LEFT JOIN residential_business_circle rbc ON bc.business_circle_id = rbc.business_circle_id
+                        where rbc.residential_id = h.residential_id
+					)  as business_circle_multi,
+					(
+						SELECT
+							concat(',',GROUP_CONCAT(rbc.business_circle_id),',') as business_circle_ids
+						FROM
+							business_circle bc
+						LEFT JOIN residential_business_circle rbc ON bc.business_circle_id = rbc.business_circle_id
+						where rbc.residential_id = h.residential_id
+					)   as business_circle_ids,
+					(
+						SELECT
+							GROUP_CONCAT(DISTINCT(sd2.dep_name)) as dep_names
+						FROM
+							residential_department rd
+						LEFT JOIN sys_department sd2 ON rd.did = sd2.dep_id
+						where rd.residential_id = r.residential_id					)  as  residential_department_name,
+					(
+						SELECT
+							concat(',',GROUP_CONCAT(DISTINCT(rd.did)),',') dids
+						FROM
+							residential_department rd
+						LEFT JOIN sys_department sd2 ON rd.did = sd2.dep_id
+						where rd.residential_id = r.residential_id
+					)
+							 as residential_department_did
+                    ,(select concat(',',GROUP_CONCAT(ifnull(hk.mobile_phone_number,'')), ',',GROUP_CONCAT(ifnull(hk.telephone_number,'')),',') as telephone_numbers
+						 from house_linkman hk 
+                         where house_id=h.house_id
+
+                         group by hk.house_id
+                        )as telephone_numbers
+              FROM
+		<include refid="searchHouseSQL"></include>
+		
+		<if test="null != offset and '' != offset and null != limit and '' != limit" > 
+			limit offset,limit
+		</if>
+	</select>
+	<!-- 符合查询条件的房屋记录总数 -->
+	<select id="countSearchHouse" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT count(1)
+				FROM
+		<include refid="searchHouseSQL"></include>
+	</select>
+	<sql id="searchHouseSQL">
+		
+				
+					house AS h
+				JOIN house_rent hr ON h.house_id = hr.house_id AND hr.deleted = 0
+				JOIN sys_district sdt1 ON h.city_code = sdt1. CODE AND sdt1. LEVEL = 2
+				JOIN residential r ON r.residential_id = h.residential_id and r.deleted=0
+				JOIN residential_building rb ON rb.building_id = h.building_id and rb.deleted=0
+				LEFT JOIN sys_dict_item d ON d.dict_code = 'Suffix' AND d.dict_key = rb.suffix
+				LEFT JOIN sys_district sdt2 ON h.area_code = sdt2. CODE AND sdt2. LEVEL = 3
+				<!-- LEFT JOIN sys_department sd ON hr.belong_did = sd.dep_id -->
+				LEFT JOIN sys_user su ON hr.belong_uid = su.user_id
+				LEFT JOIN sys_department sd ON su.dep_id = sd.dep_id 
+				LEFT JOIN sys_user su2 ON h.create_uid = su2.user_id
+				left join (
+						SELECT
+							COUNT(hc.contract_id) as entrust_times,max(hc.update_time) as update_time,max(hc.create_time) as create_time,hc.house_id,
+                             case when LOCATE('ENTIRE',max(CONCAT(hc.entrust_start_date,'|',hc.entrust_type)))>0 then 'ENTIRE' 
+                            when LOCATE('SHARE',max(CONCAT(hc.entrust_start_date,'|',hc.entrust_type)))>0 then 'SHARE' end as entrust_type
+						FROM
+							house_contract hc
+						WHERE
+							
+						 hc.is_active = 'Y'
+						AND hc.deleted = 0
+                        
+                        group by hc.house_id
+					) hc on hc.house_id = h.house_id
+				<if test="null != entrust_type_search">
+				INNER JOIN house_contract hc ON hc.house_id = h.house_id
+					AND hc.is_active = 'Y'
+					AND hc.deleted = 0
+					AND hc.entrust_type = in (${entrust_type_search})</if>
+				<if test="null != audit_status">
+					INNER JOIN online_house_info ohi ON ohi.house_id=h.house_id 
+				</if>
+				
+		<include refid="houseListSql"></include>
+	</sql>
+	<!-- 列表查询条件 -->
+	<sql id="houseListSql">
+		<where>
+			<trim prefixOverrides="and">
+				and h.deleted=0
+				<if test="house_id != null and '' !=  house_id">
+					 and h.house_id = #{house_id}
+				</if>
+				<if test="null != audit_status">and ohi.audit_status=#{audit_status}</if>
+				<if test="null != city_code_search">and h.city_code=#{city_code_search}</if>
+				<if test="null != area_code_search">and h.area_code in (${area_code_search})</if>
+				<if test="null != business_circle_search">
+				 	and EXISTS(select 1 from residential_business_circle rbc where rbc.residential_id=h.residential_id and rbc.business_circle_id in (${business_circle_search}))
+				</if>
+				<if test="null != residential_name_search">and r.residential_name like CONCAT('%','${residential_name_search}','%' )</if>
+				<if test="null != building_name_search">and rb.building_name like CONCAT('%','${building_name_search}','%' )</if>
+				<if test="null != unit_search">and h.unit=#{unit_search}</if>
+				<if test="null != house_no_search">and h.house_no like CONCAT('%','${house_no_search}','%' )</if>
+				<if test="null != rooms_start_search"><![CDATA[and h.rooms >= #{rooms_start_search}]]></if>
+				<if test="null != rooms_end_search"><![CDATA[and h.rooms <= #{rooms_end_search}]]></if>
+				<if test="null != rooms_search">and h.rooms in (${rooms_search})</if>
+				<if test="null != livings_search">and h.livings in (${livings_search})</if>
+				<if test="null != kitchens_search">and h.kitchens in (${kitchens_search})</if>
+				<if test="null != bathrooms_search">and h.bathrooms in (${bathrooms_search})</if>
+				<if test="null != balconys_search">and h.balconys in (${balconys_search})</if>
+				<if test="null != build_area_start_search"><![CDATA[and h.build_area >= #{build_area_start_search}]]></if>
+				<if test="null != build_area_end_search"><![CDATA[and h.build_area <= #{build_area_end_search}]]></if>
+				<if test="null != fitment_type_search">and h.fitment_type in (${fitment_type_search})</if>
+				<if test="null != activated_time_start_search"><![CDATA[and date(hr.activated_time) >= #{activated_time_start_search}]]></if>
+				<if test="null != activated_time_end_search"><![CDATA[and date(hr.activated_time) <= #{activated_time_end_search}]]></if>
+				<!-- tip -->
+				<if test="null != belong_did_search and '' != belong_did_search and (null == belong_uid_search or '' == belong_uid_search)">
+					and su.dep_id in (select t.child_id from sys_department_flat t where t.dept_id in (${belong_did_search}))
+				</if>
+				<if test="null != belong_uid_search and '' != belong_uid_search">and hr.belong_uid in (${belong_uid_search})</if>
+				<if test="null != user_name_search">and su.user_name like CONCAT('%','${user_name_search}','%' )</if>
+				<if test="null != look_date_start_search"><![CDATA[and date(hr.look_date) >= #{look_date_start_search}]]></if>
+				<if test="null != look_date_end_search"><![CDATA[and date(hr.look_date) <= #{look_date_end_search}]]></if>
+				<if test="null != property_use_search">and h.property_use in (${property_use_search})</if>
+				<if test="null != contact_tel_search">
+					and EXISTS(select 1 from house_linkman hk where hk.house_id=h.house_id and (
+						hk.mobile_phone_number=#{contact_tel_search}
+						OR
+						hk.telephone_number=#{contact_tel_search}
+					))
+				</if>
+				<if test="null != house_code_search">and h.house_code like CONCAT('%','${house_code_search}','%' )</if>
+				<if test="null != residential_name_house_code_search">
+					and (
+						h.house_code like CONCAT('%','${residential_name_house_code_search}','%' )
+						OR r.residential_name like CONCAT('%','${residential_name_house_code_search}','%' )
+						OR r.byname like CONCAT('%','${residential_name_house_code_search}','%' )
+						OR r.address like CONCAT('%','${residential_name_house_code_search}','%' )
+					)
+				</if>
+				<if test="null != orientation_search">and h.orientation in (${orientation_search})</if>
+				<if test="null != floor_search">and h.floor=#{floor_search}</if>
+				<if test="null != floor_start_search">
+					<![CDATA[and h.floor >= ${floor_start_search}]]>
+				</if>
+				<if test="null != floor_end_search">
+					<![CDATA[and h.floor  <= ${floor_end_search}]]>
+				</if>
+				<if test="null != rental_price_start_search">
+					<![CDATA[and hr.rental_price >= #{rental_price_start_search}]]>
+				</if>
+				<if test="null != rental_price_end_search">
+					<![CDATA[and hr.rental_price <= #{rental_price_end_search}]]>
+				</if>
+				<if test="null != source_search">and hr.source in (${source_search})</if>
+				<if test="null != property_type_search">and h.property_type in (${property_type_search})</if>
+				<if test="null != look_type_search">and hr.look_type in (${look_type_search})</if>
+				<if test="null != residential_department_did_search">and rd.did in (${residential_department_did_search})</if>
+				<if test="null != create_time_start_search"><![CDATA[and date(h.create_time) >= #{create_time_start_search}]]></if>
+				<if test="null != create_time_end_search"><![CDATA[and date(h.create_time) <= #{create_time_end_search}]]></if>
+				<if test="null != follow_date_start_search and '' != follow_date_start_search">
+					<![CDATA[and (date(SELECT MAX(f.follow_date) follow f ON f.object_id=h.house_id AND f.object_type='HOUSE' AND f.deleted=0) >= #{follow_date_start_search})]]>
+				</if>
+				<if test="null != follow_date_end_search and '' != follow_date_end_search">
+					<![CDATA[and (date(SELECT MAX(f.follow_date) follow f ON f.object_id=h.house_id AND f.object_type='HOUSE' AND f.deleted=0) <= #{follow_date_end_search})]]>
+				</if>
+				<if test="null != image_times_start_search and '' != image_times_start_search">
+					<![CDATA[and ((SELECT count(house_img_id) FROM house_img WHERE house_id=h.house_id and deleted=0) >= #{image_times_start_search})]]>
+				</if>
+				<if test="null != image_times_end_search and '' != image_times_end_search">
+					<![CDATA[and ((SELECT count(house_img_id) FROM house_img WHERE house_id=h.house_id and deleted=0) <= #{image_times_end_search})]]>
+				</if>
+				<if test="null != entrust_times_start_search and '' != entrust_times_start_search">
+					<![CDATA[and ((SELECT
+							COUNT(contract_id)
+						FROM
+							house_contract
+						WHERE
+							house_id = h.house_id
+						AND is_active = 'Y'
+						AND deleted = 0) >= #{entrust_times_start_search})]]>
+				</if>
+				<if test="null != entrust_times_end_search and '' != entrust_times_end_search">
+					<![CDATA[and ((SELECT
+							COUNT(contract_id)
+						FROM
+							house_contract
+						WHERE
+							house_id = h.house_id
+						AND is_active = 'Y'
+						AND deleted = 0) <= #{entrust_times_end_search})]]>
+				</if>
+				<if test="null != entrust_date_start_search and '' != entrust_date_start_search">
+					<![CDATA[and (date(SELECT
+							MAX(create_time)
+						FROM
+							house_contract
+						WHERE
+							house_id = h.house_id
+						AND is_active = 'Y'
+						AND deleted = 0) >= #{entrust_date_start_search})]]>
+				</if>
+				<if test="null != entrust_date_end_search and '' != entrust_date_end_search">
+					<![CDATA[and (date(SELECT
+							MAX(create_time)
+						FROM
+							house_contract
+						WHERE
+							house_id = h.house_id
+						AND is_active = 'Y'
+						AND deleted = 0) <= #{entrust_date_end_search})]]>
+				</if>
+				and hr.house_status in ('BOOKED','WAITING_RENT')
+			</trim>
+		</where>
+		
+	</sql>
+	<!-- 根据house_id返回一条记录 -->
+	<select id="selectByHouseId" parameterType="java.lang.String" resultMap="HouseBaseMap">
+		SELECT
+			h.house_id,h.residential_id,h.building_id,h.city_code,h.area_code,h.house_code,h.right_num,h.unit,
+			CONCAT(h.floor,"|",rb.underground_floors+rb.ground_floors) as floor_floors,h.house_no,h.rooms,h.livings,h.kitchens,h.bathrooms,h.balconys,h.build_area,h.orientation,
+			h.property_type,h.property_use,h.property_right,h.fitment_type,h.remark,h.deleted,h.create_time,h.create_uid,
+			h.update_time,h.update_uid,
+			su2.user_name create_user_name,
+			su3.user_name update_user_name,
+			r.residential_name,
+			rb.building_name,
+			rb.suffix suffix
+		FROM
+			house AS h
+		LEFT JOIN sys_user su2 ON h.create_uid=su2.user_id
+		LEFT JOIN sys_user su3 ON h.update_uid=su3.user_id
+		LEFT JOIN residential r ON r.residential_id=h.residential_id AND r.deleted=0
+		LEFT JOIN residential_building rb ON rb.building_id=h.building_id AND rb.deleted=0
+		WHERE
+			h.deleted=0 AND h.house_id=#{house_id}
+	</select>
+	<!-- 根据楼盘ID、栋座ID、城、单元、层、房号返回房屋信息 -->
+	<select id="selectByHouse" parameterType="com.isz.erp.facade.house.entity.House" resultType="com.isz.erp.facade.house.entity.House">
+		SELECT
+			h.house_id,h.residential_id,h.building_id,h.city_code,h.area_code,h.house_code,h.unit,
+			h.floor,h.house_no,h.rooms,h.livings,h.kitchens,h.bathrooms,h.balconys,h.build_area,h.orientation,
+			h.property_type,h.property_use,h.property_right,h.fitment_type,h.remark,h.deleted,h.create_time,h.create_uid,
+			h.update_time,h.update_uid
+		FROM
+			house AS h
+		WHERE
+			h.deleted=0 AND h.residential_id=#{residential_id} AND h.building_id=#{building_id} AND h.city_code=#{city_code} 
+			AND h.unit=#{unit} AND h.house_no=#{house_no}
+	</select>
+	
+	<!-- 判断楼层或者单元是否已使用 -->
+	<select id="isUse4Residential" parameterType="java.util.Map" resultType="java.lang.Integer">
+	    SELECT count(*) 
+	    FROM house a 
+	    WHERE a.residential_id = #{residential_id} 
+	    AND a.building_id = #{building_id} 
+	    <if test="null != floor_name">
+	        AND a.floor = #{floor_name}
+	    </if>
+	    <if test="null != unit_name">
+	        AND a.unit = #{unit_name}
+	    </if>
+	</select>
+	<!-- 根据房源ID返回房源信息 -->
+	<select id="searchApiHouse" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			r.residential_name premName,
+			(rb.building_name+IFNULL(sdi.dict_value,'')) buildingName,
+			h.unit unitName,
+			h.house_no houseNo,
+			h.house_code houseNum
+		FROM house h
+		LEFT JOIN residential r ON r.residential_id=h.residential_id AND r.deleted=0
+		LEFT JOIN residential_building rb ON rb.building_id=h.building_id AND rb.deleted=0
+		LEFT JOIN sys_dict_item sdi ON sdi.dict_code='Suffix' AND sdi.dict_key=rb.suffix
+		WHERE h.deleted=0 AND h.house_id=#{houseId}
+	</select>
+	
+	<!-- 根据房源ID返回房源信息 -->
+	<select id="searchApiApartment" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT a.house_id as baseHouseId,sdi.dict_value as roomNum
+		FROM apartment a 
+		LEFT JOIN house_room hr ON a.room_id = hr.room_id
+		LEFT JOIN sys_dict_item sdi ON sdi.dict_code='RoomNo' AND sdi.dict_key=hr.room_no
+		WHERE a.apartment_id = #{roomId}
+	</select>
+		<!-- 根据楼盘字典id查询责任部门id -->
+	<select id="searchResidentialBuildingDepIdByBuildingId" resultType="com.isz.erp.facade.user.entity.SysDepart">
+		SELECT
+			dep_id,business_type
+		FROM
+			residential_building t
+		LEFT JOIN residential r ON t.residential_id = r.residential_id
+		LEFT JOIN residential_department rd ON rd.residential_id = r.residential_id
+		LEFT JOIN sys_department sd ON sd.dep_id = rd.did
+		WHERE
+			building_id = #{0}
+	
+	</select>
+	
+	<!-- 查询租赁组部门depIds  -->
+	<select id="getRentChildDepIds"   resultType="java.lang.String">
+		SELECT
+			GROUP_CONCAT(t.dep_id) dep_id
+		FROM
+			sys_department t
+		WHERE
+			t.dep_id IN (${depIds})
+		AND t.dep_name LIKE '%租赁%'
+	</select>
+	<!-- 根据houseid 更新官网维护人 -->
+	<update id="updateWebMangerUidByWeb" parameterType="java.lang.String">
+	UPDATE house_rent set web_manager_uid = #{1} where house_id = #{0}
+	
+	</update>
+	<!-- 房源预定 普单列表 -->
+	<select id="searchBookAvailabilityHouseList" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			h.house_id,
+			hr.house_status,
+			hr.category,
+			h.house_code,
+			CONCAT_WS('',r.residential_name,rb.building_name,IFNULL(sdi.dict_value,''),h.house_no) property_address,
+			'GENERAL' object_type,
+			hr.rental_price,
+			sd.dep_name,
+			su.user_name,
+			h.update_time
+			<include refid="bookAvailabilityHouseSQL"></include>
+			<if test="null != sort and sort != ''">
+				ORDER BY ${sort}
+				<if test="null != order and order != ''">
+					${order}
+				</if>
+			</if>
+	</select>
+	<select id="countSearchBookAvailabilityHouse" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(1) <include refid="bookAvailabilityHouseSQL"></include>;
+	</select>
+	<sql id="bookAvailabilityHouseSQL">
+		FROM house h
+		INNER JOIN house_rent hr ON hr.house_id=h.house_id
+		INNER JOIN residential r ON h.residential_id=r.residential_id
+		INNER JOIN residential_building rb ON h.building_id=rb.building_id
+		LEFT JOIN sys_dict_item sdi ON sdi.dict_code='Suffix' AND sdi.dict_e_value=rb.suffix
+		<!-- LEFT JOIN sys_department sd ON sd.dep_id=hr.belong_did -->
+		LEFT JOIN sys_user su ON su.user_id=hr.belong_uid
+		LEFT JOIN sys_department sd ON sd.dep_id=su.dep_id
+		<where>
+			<trim prefixOverrides="and">
+				and h.deleted=0
+				<if test="null != residential_name_house_code_search and '' != residential_name_house_code_search">
+					and (r.residential_name like CONCAT('%','${residential_name_house_code_search}','%')
+					or h.house_code like CONCAT('%','${residential_name_house_code_search}','%')
+					or r.byname like CONCAT('%','${residential_name_house_code_search}','%' )
+					or r.address like CONCAT('%','${residential_name_house_code_search}','%' )
+					)
+				</if>
+				<if test="null != building_name_search and '' != building_name_search">
+					and rb.building_name like CONCAT('%','${building_name_search}','%')
+				</if>
+				<if test="null != unit_search and '' != unit_search">
+					and h.unit like CONCAT('%','${unit_search}','%')
+				</if>
+				<if test="null != house_no_search and '' != house_no_search">
+					and h.house_no like CONCAT('%','${house_no_search}','%')
+				</if>
+				<if test="city_code_search != null">
+					and h.city_code in (${city_code_search})
+				</if>
+				<if test="null != status_sql_search and '' != status_sql_search">
+					and (${status_sql_search})
+				</if>
+			</trim>
+		</where>
+	</sql>
+</mapper>

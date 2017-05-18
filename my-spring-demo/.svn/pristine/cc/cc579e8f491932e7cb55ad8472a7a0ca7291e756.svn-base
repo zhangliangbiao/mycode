@@ -1,0 +1,169 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.Apartment;
+import com.isz.erp.facade.house.entity.House;
+import com.isz.erp.facade.house.entity.Image;
+import com.isz.erp.facade.house.entity.Residential;
+import com.isz.erp.facade.house.entity.ResidentialCopeBig;
+import com.isz.erp.facade.house.entity.ResidentialExcelData;
+import com.isz.erp.facade.house.entity.UnitExcelData;
+import com.isz.erp.facade.user.entity.SysDepart;
+
+/**
+ * @author WangShuo *
+ * @version 1.0 *
+ * @date 创建时间：2016年1月12日 下午7:05:42 *
+ * @instruction 说明：
+ */
+public interface ResidentialMapper extends Mapper<Residential> {
+
+    /**
+     * 查询楼盘信息(分页)
+     *
+     * @param data
+     * @return
+     */
+    public List<Residential> searchResidentialList(Map<String, Object> data);
+
+    /**
+     * 查询楼盘信息(总数量)
+     *
+     * @param data
+     * @return
+     */
+    public Integer countSearchResidential(Map<String, Object> data);
+
+    /**
+     * 保存楼盘信息
+     *
+     * @param taResidential
+     * @return
+     */
+    public Integer saveResidential(Residential taResidential);
+
+    /**
+     * 删除楼盘信息
+     *
+     * @param map
+     * @return
+     */
+    public Integer deleteResidential4Update(Map<String, Object> map);
+    /**
+     * 删除楼盘图片
+     *
+     * @param map
+     * @return
+     */
+    public Integer deleteResidentialImg4Update(Map<String, Object> map);
+    /**
+     * 删除楼盘 部门关联关系
+     *
+     * @param map
+     * @return
+     */
+    public Integer deleteResidentialDepartment(Map<String, Object> map);
+    /**
+     * 删除楼盘 商圈关联关系
+     *
+     * @param map
+     * @return
+     */
+    public Integer deleteResidentialBusinessCircle(Map<String, Object> map);
+    /**
+     * 删除楼盘 下所有房号
+     *
+     * @param map
+     * @return
+     */
+    public Integer deleteResidentialBuildingHouseNo(Map<String, Object> map);
+    /**
+     * 删除楼盘 下所有层
+     *
+     * @param map
+     * @return
+     */
+    public Integer deleteResidentialBuildingFloor(Map<String, Object> map); 
+    /**
+     * 删除楼盘 下所有单元
+     *
+     * @param map
+     * @return
+     */
+    public Integer deleteResidentialBuildingUnit(Map<String, Object> map); 
+    /**
+     * 删除楼盘 下所有栋座
+     *
+     * @param map
+     * @return
+     */
+    public Integer deleteResidentialBuilding4Update(Map<String, Object> map); 
+    
+    /**
+     * 查询楼盘详情
+     *
+     * @param residential_id
+     * @return
+     */
+    public Residential selectResidentialDetail(String residential_id);
+
+    public List<SysDepart> selectDeptByResiId(String residential_id);
+
+    public List<Image> selectImageByResiId(String residential_id);
+
+    /**
+     * 根据楼盘字典名称判断楼盘字典是否存在
+     *
+     * @param map
+     * @return
+     */
+    public Integer checkResidentialNameHave(Map<String, Object> map);
+
+    public Residential selectByDepId(String dep_id);
+
+    /**
+     * 根据楼盘字典的id来查询楼盘下所有的出租房源
+     *
+     * @param residential_id
+     * @return
+     */
+    public List<House> searchHouseListByResidentialId(String residential_id);
+
+    /**
+     * 根据小区名称获取楼盘列表
+     *
+     * @param apiParams
+     * @return List<Map<String,Object>>
+     */
+    public List<Map<String, Object>> searchApiResidential(Map<String, Object> apiParams);
+
+
+    /**
+     * 根据楼盘字典的id来查询楼盘下所有的自营公寓房源
+     *
+     * @param residential_id
+     * @return
+     */
+    public List<Apartment> searchApartmentListByResidentialId(String residential_id);
+
+    public List<ResidentialCopeBig> getIn();
+
+    public List<UnitExcelData> getUnitExcelData();
+
+    public List<ResidentialExcelData> getResidentialExcelData();
+
+    public Integer selectResidentialByResidentialExcelData(String residential_name, String area_name, String city_name);
+
+    public Residential selectResidential(String residential_name, String area_name, String city_name);
+
+    public List<Map<String, Object>> searchResidentialListForSelect(Map<String, Object> pageData);
+
+    public Integer countSearchResidentialForSelect(Map<String, Object> pageData);
+    
+    public String selectSysDepIdByResidentialId(String residential_id);
+    
+    
+}

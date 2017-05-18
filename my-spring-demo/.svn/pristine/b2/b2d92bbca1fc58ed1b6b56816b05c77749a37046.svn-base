@@ -1,0 +1,693 @@
+package com.isz.erp.house.service.impl;
+
+
+import com.isz.erp.common.page.PagingHelper;
+import com.isz.erp.common.util.*;
+import com.isz.erp.facade.house.entity.*;
+import com.isz.erp.facade.house.service.HouseService;
+import com.isz.erp.facade.user.entity.SysUser;
+import com.isz.erp.facade.user.vo.SessionVo;
+import com.isz.erp.house.biz.HouseServiceBiz;
+
+import org.apache.solr.client.solrj.SolrClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @author WangShuo *
+ * @version 1.0 *
+ * @date 创建时间：2016年1月13日 下午2:55:30 *
+ * @instruction 说明：
+ */
+@Service("houseServiceFacade")
+public class HouseServiceFacade implements HouseService {
+
+    private String SOLR_CORE = "house_core";
+
+    @Autowired
+    private SolrClientUtil solrClientUtil;
+
+    @Autowired
+    private HouseServiceBiz houseServiceBiz;
+
+    @Override
+    public ResultObjectMsg<Integer> checkIsUseRedidential(@SuppressWarnings("rawtypes") Map map) {
+        try {
+            return houseServiceBiz.checkIsUseRedidential(map);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.checkIsUseRedidential", e);
+            return new ResultObjectMsg<Integer>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<HouseDevelopConfiguration>> selectHouseDevelopConfigurationList(String house_develop_id) {
+        try {
+            return houseServiceBiz.selectHouseDevelopConfigurationList(house_develop_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseDevelopConfigurationList", e);
+            return new ResultObjectMsg<List<HouseDevelopConfiguration>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveHouseDevelopConfiguration(HouseDevelop houseDevelop) {
+        try {
+            return houseServiceBiz.saveHouseDevelopConfiguration(houseDevelop);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseDevelopConfiguration", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveHouseDevelopImg(HouseDevelop houseDevelop) {
+        try {
+            return houseServiceBiz.saveHouseDevelopImg(houseDevelop);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseDevelopImg", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveHouseDevelop(SysUser sysUser, HouseDevelop houseDevelop) {
+        try {
+            return houseServiceBiz.saveHouseDevelop(sysUser, houseDevelop);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseDevelop", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<PagingHelper<HouseDevelop>> searchHouseDevelopList(Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.searchHouseDevelopList(pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchHouseDevelopList", e);
+            return new ResultObjectMsg<PagingHelper<HouseDevelop>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<HouseDevelop> selectHouseDevelopDetail(String house_develop_id) {
+        try {
+            return houseServiceBiz.selectHouseDevelopDetail(house_develop_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseDevelopDetail", e);
+            return new ResultObjectMsg<HouseDevelop>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg deleteHouseDevelop(SessionVo sessionVo, String house_develop_id) {
+        try {
+            return houseServiceBiz.deleteHouseDevelop(sessionVo, house_develop_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.deleteHouseDevelop", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg auditHouseDevelop(House house) {
+        try {
+            return houseServiceBiz.auditHouseDevelop(house);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.auditHouseDevelop", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<PagingHelper<HouseDevelopImg>> searchHouseDevelopImgList(Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.searchHouseDevelopImgList(pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchHouseDevelopImgList", e);
+            return new ResultObjectMsg<PagingHelper<HouseDevelopImg>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<HouseDevelopImg>> selectHouseDevelopImgList(Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.selectHouseDevelopImgList(pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseDevelopImgList", e);
+            return new ResultObjectMsg<List<HouseDevelopImg>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg addHouseDevelopImg(HouseDevelopImg houseDevelopImg) {
+        try {
+            return houseServiceBiz.addHouseDevelopImg(houseDevelopImg);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.addHouseDevelopImg", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg deleteHouseDevelopImg(String house_img_id) {
+        try {
+            return houseServiceBiz.deleteHouseDevelopImg(house_img_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.deleteHouseDevelopImg", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<HouseConfiguration>> selectHouseConfigurationList(String house_id) {
+        try {
+            return houseServiceBiz.selectHouseConfigurationList(house_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseConfigurationList", e);
+            return new ResultObjectMsg<List<HouseConfiguration>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveHouseConfiguration(House house) {
+        try {
+            return houseServiceBiz.saveHouseConfiguration(house);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseConfiguration", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveHouseImg(House house) {
+        try {
+            return houseServiceBiz.saveHouseImg(house);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseImg", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<House> saveHouse(SessionVo sessionVo, House house) {
+        ResultObjectMsg<House> resultObjectMsg = new ResultObjectMsg<House>();
+        try {
+            resultObjectMsg = houseServiceBiz.saveHouse(sessionVo, house);
+
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouse", e);
+            resultObjectMsg.createErrorMsg(e.getMessage());
+        }
+        return resultObjectMsg;
+    }
+
+    @Override
+    public ResultObjectMsg<PagingHelper<House>> searchHouse(Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.searchHouse(pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchHouse", e);
+            return new ResultObjectMsg<PagingHelper<House>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<House> selectHouseDetailbyMap(Map<String, Object> pageData, SessionVo sessionVo) {
+        try {
+            return houseServiceBiz.selectHouseDetailbyMap(pageData, sessionVo);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseDetail", e);
+            return new ResultObjectMsg<House>(e.getMessage());
+        }
+    }
+
+
+    @Override
+    public ResultObjectMsg<House> selectHouseDetail(String house_id) {
+        try {
+            return houseServiceBiz.selectHouseDetail(house_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseDetail", e);
+            return new ResultObjectMsg<House>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg deleteHouse(SysUser sysUser, String house_id) {
+        try {
+            return houseServiceBiz.deleteHouse(sysUser, house_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.deleteHouse", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<PagingHelper<HouseImg>> searchHouseImgList(Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.searchHouseImgList(pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchHouseImgList", e);
+            return new ResultObjectMsg<PagingHelper<HouseImg>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<HouseImg>> selectHouseImgList(Map<String, Object> data, SessionVo sessionVo) {
+        try {
+            return houseServiceBiz.selectHouseImgList(data, sessionVo);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseImgList", e);
+            return new ResultObjectMsg<List<HouseImg>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<HouseImg>> selectHouseImgList(Map<String, Object> data) {
+        try {
+            return houseServiceBiz.selectHouseImgList(data);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseImgList", e);
+            return new ResultObjectMsg<List<HouseImg>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<HouseImg> addHouseImg(HouseImg houseImg, SessionVo sessionVo) {
+        try {
+            return houseServiceBiz.addHouseImg(houseImg, sessionVo);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.addHouseImg", e);
+            return new ResultObjectMsg<HouseImg>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg deleteHouseImg(String house_img_id) {
+        try {
+            return houseServiceBiz.deleteHouseImg(house_img_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.deleteHouseImg", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg updateHouseImg(HouseImg houseImg) {
+        try {
+            return houseServiceBiz.updateHouseImg(houseImg);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.updateHouseImg", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<HouseImg> selectHouseImgDetail(String house_img_id) {
+        try {
+            return houseServiceBiz.selectHouseImgDetail(house_img_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseImgDetail", e);
+            return new ResultObjectMsg<HouseImg>(e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    public ResultMsg updateHouseFromGeneralContract(Map map) {
+        try {
+            return houseServiceBiz.updateHouseFromGeneralContract(map);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.updateHouseFromGeneralContract", e);
+            return new ResultMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<PagingHelper<HouseLinkman>> searchHouseLinkmanList(SysUser sysUser, Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.searchHouseLinkmanList(sysUser, pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchHouseLinkmanList", e);
+            return new ResultObjectMsg<PagingHelper<HouseLinkman>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg deleteHouseLinkman(SysUser sysUser, String linkman_id) {
+        try {
+            return houseServiceBiz.deleteHouseLinkman(sysUser, linkman_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.deleteHouseLinkman", e);
+            return new ResultMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveHouseLinkman(SysUser sysUser, HouseLinkman houseLinkman) {
+        try {
+            return houseServiceBiz.saveHouseLinkman(sysUser, houseLinkman);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseLinkman", e);
+            return new ResultMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<HouseLinkman> selectHouseLinkmanDetail(String linkman_id) {
+        try {
+            return houseServiceBiz.selectHouseLinkmanDetail(linkman_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseLinkmanDetail", e);
+            return new ResultObjectMsg<HouseLinkman>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg saveHouseLinkmanViewed(SysUser sysUser, String house_id) {
+        try {
+            return houseServiceBiz.saveHouseLinkmanViewed(sysUser, house_id);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseLinkmanViewed", e);
+            return new ResultMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiResidential(Map<String, Object> apiParams) {
+        try {
+            return houseServiceBiz.searchApiResidential(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchApiResidential", e);
+            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiApartment(Map<String, Object> apiParams) {
+        try {
+            return houseServiceBiz.searchApiApartment(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchApiResidential", e);
+            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiImage(String imgIds) {
+        try {
+            return houseServiceBiz.searchApiImage(imgIds);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchApiImage", e);
+            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<Map<String, Object>> searchApiHouse(String houseId) {
+        try {
+            return houseServiceBiz.searchApiHouse(houseId);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchApiHouse", e);
+            return new ResultObjectMsg<Map<String, Object>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<Map<String, Object>> searchApiApartment(String roomId) {
+        try {
+            return houseServiceBiz.searchApiApartment(roomId);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchApiApartment", e);
+            return new ResultObjectMsg<Map<String, Object>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<SysUser> selectRodomWebUser(Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.selectRodomWebUser(pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectRodomWebUser", e);
+            return new ResultObjectMsg<SysUser>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg randomUpdateWebManger(String building_id, String belong_did, String belong_uid, String houseId) {
+        try {
+            return houseServiceBiz.randomUpdateWebManger(building_id, belong_did, belong_uid, houseId);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.randomUpdateWebManger", e);
+            return new ResultMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<PagingHelper<Map<String, Object>>> searchBookAvailabilityGeneralList(Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.searchBookAvailabilityGeneralList(pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchBookAvailabilityGeneralList", e);
+            return new ResultObjectMsg<PagingHelper<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg updateStatus(SysUser sysUser, String house_id, String house_status, String category) {
+        try {
+            return houseServiceBiz.updateStatus(sysUser, house_id, house_status, category);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.updateStatus", e);
+            return new ResultMsg(e.getMessage());
+        }
+    }
+
+
+    @Override
+    public ResultObjectMsg<List<Map<String, Object>>> searchApiApartmentByContract(Map<String, Object> apiParams) {
+        try {
+            return houseServiceBiz.searchApiApartmentByContract(apiParams);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchApiApartmentByContract", e);
+            return new ResultObjectMsg<List<Map<String, Object>>>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg solrHouseIndexAll() {
+        try {
+            IszLogger.info("solr:house index all start");
+            solrHouseIndex(null);
+            IszLogger.info("solr:house index all end");
+            return ResultMsg.createOkMsg();
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.solrHouseIndexAll", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    /**
+     * 索引某个House房源
+     *
+     * @param house_id
+     * @return ResultMsg
+     * @throws Exception
+     */
+    private ResultMsg solrHouseIndex(String house_id) throws Exception {
+        Integer count = 0;
+        int limit = 500; // 每次获取条数
+        int offset = 0;// 下一个开始条数
+        Map<String, Object> params = new HashMap<>();
+        SolrClient solrClient = solrClientUtil.getSolrClient(SOLR_CORE);
+        if (house_id == null) {
+            count = houseServiceBiz.searchHouseListCountBySolr();
+        }
+
+        do {
+            params.put("limit", limit);
+            params.put("offset", offset);
+            params.put("house_id", house_id);
+            List<House> houseList = houseServiceBiz.searchHouseListBySolr(params);
+            try {
+                // 如果增量索引查不到house_id数据时，删除索引
+                if ((null == houseList || houseList.size() == 0) && null != house_id) {
+                    solrClient.deleteById(house_id);
+                    solrClient.commit();
+                } else {
+                    if(null != houseList && houseList.size() > 0) {
+                        solrClient.addBeans(houseList, 20000);
+                        solrClient.commit();
+                    }
+                }
+
+            } catch (Exception e) {
+                if (house_id == null) {
+                    IszLogger.error(SOLR_CORE + " solr 全量索引 error：" + e);
+                } else {
+                    IszLogger.error(SOLR_CORE + " solr 添加索引 house_id:" + house_id + "error：" + e);
+                }
+            }
+            offset += limit;
+
+        }
+        while (count > offset);
+        return ResultMsg.createOkMsg();
+    }
+
+    @Override
+    public ResultMsg solrHouseUpdateIndexByUpdateTime() {
+        Integer count = 0;
+        int limit = 500; // 每次获取条数
+        int offset = 0;// 下一个开始条数
+        Map<String, Object> params = new HashMap<>();
+        SolrClient solrClient = solrClientUtil.getSolrClient(SOLR_CORE);
+        count = houseServiceBiz.searchHouseUpdateListCountBySolr();
+
+        do {
+            params.put("limit", limit);
+            params.put("offset", offset);
+            params.put("house_update_solr", "house_update_solr");
+            List<House> houseList = houseServiceBiz.searchHouseListBySolr(params);
+            try {
+                if (null != houseList && houseList.size() > 0) {
+                    solrClient.addBeans(houseList, 20000);
+                    solrClient.commit();
+                }
+            } catch (Exception e) {
+                IszLogger.error(SOLR_CORE + " solr 增量索引 error：" + e);
+            }
+            offset += limit;
+
+        }
+        while (count > offset);
+        return ResultMsg.createOkMsg();
+    }
+
+    @Override
+    public ResultMsg solrHouseDeleteIndexByUpdateTime() {
+        IszLogger.info("solr:house index delete start");
+        List<House> houseList = houseServiceBiz.searchHouseDeleteListBySolr();
+        SolrClient solrClient = solrClientUtil.getSolrClient(SOLR_CORE);
+        try {
+            if(null != houseList && houseList.size() > 0) {
+                for (House house : houseList) {
+                    solrClient.deleteById(house.getHouse_id());
+                    solrClient.commit();
+                }
+            }
+            IszLogger.info("solr:house index delete end");
+        } catch (Exception e) {
+            IszLogger.error(SOLR_CORE + " solr 增量删除提交时 error：" + e);
+            IszLogger.error("HouseServiceFacade.solrHouseDeleteIndexByUpdateTime", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    @Override
+    public ResultMsg solrHouseDeleteIndexAll() {
+        IszLogger.info("solr:house index delete all start");
+        Integer count = houseServiceBiz.searchHouseDeleteListALLCountBySolr();
+        int limit = 500; // 每次获取条数
+        int offset = 0;// 下一个开始条数
+        Map<String, Object> params = new HashMap<>();
+        SolrClient solrClient = solrClientUtil.getSolrClient(SOLR_CORE);
+
+        do {
+            params.put("limit", limit);
+            params.put("offset", offset);
+            List<String> houseIdList = houseServiceBiz.searchHouseDeleteListALLBySolr(params);
+            try {
+                if(null != houseIdList && houseIdList.size() > 0) {
+                    solrClient.deleteById(houseIdList);
+                    solrClient.commit();
+                }
+            } catch (Exception e) {
+                IszLogger.error(SOLR_CORE + " solr 删除索引  error：" + e);
+            }
+            offset += limit;
+
+        }
+        while (count > offset);
+        IszLogger.info("solr:house index delete all end");
+        return ResultMsg.createOkMsg();
+    }
+
+    @Override
+    public ResultMsg solrHouseUpdateIndex(String house_id) {
+        try {
+            IszLogger.info("solr:house index update by id:" + house_id + "start");
+            ResultMsg resultMsg = solrHouseIndex(house_id);
+            IszLogger.info("solr:house index update by id:" + house_id + "end");
+            return resultMsg;
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.solrHouseUpdateIndex", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultMsg solrHouseDeleteIndex(String house_id) {
+        IszLogger.info("solr:house index delete by id:" + house_id + " start");
+        SolrClient solrClient = solrClientUtil.getSolrClient(SOLR_CORE);
+        try {
+            solrClient.deleteById(house_id);
+            solrClient.commit();
+            IszLogger.info("solr:house index delete by id:" + house_id + " end");
+        } catch (Exception e) {
+            IszLogger.error(SOLR_CORE + " solr 增量删除 error：" + e);
+            IszLogger.error("HouseServiceFacade.solrHouseDeleteIndex", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+        return ResultMsg.createOkMsg();
+    }
+
+    @Override
+    public List<Map<String, Object>> searchHouseDevelopListForExportExcel(Map<String, Object> queryParaMap) {
+        try {
+            return houseServiceBiz.searchHouseDevelopListForExportExcel(queryParaMap);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.searchHouseDevelopListForExportExcel", e);
+            return null;
+        }
+    }
+    
+    @Override
+    public ResultObjectMsg<HouseDevelop> saveHouseDevelopCentral(SysUser sysUser, HouseDevelop houseDevelop) {
+        try {
+            return houseServiceBiz.saveHouseDevelopCentral(sysUser, houseDevelop);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseDevelopCentral", e);
+            return new ResultObjectMsg<HouseDevelop>(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResultObjectMsg<PagingHelper<HouseDevelop>> selectHouseDevelopSimilarList(Map<String, Object> queryParaMap) {
+        try {
+            return houseServiceBiz.selectHouseDevelopSimilarList(queryParaMap);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.selectHouseDevelopSimilarList", e);
+            return null;
+        }
+    }
+    
+    @Override
+    public ResultMsg changeHouseBelong(SysUser sysUser,Map<String, Object> pageData) {
+        try {
+            return houseServiceBiz.changeHouseBelong(sysUser,pageData);
+        } catch (Exception e) {
+            IszLogger.error("HouseServiceFacade.saveHouseDevelopCentral", e);
+            return ResultMsg.createErrorMsg(e.getMessage());
+        }
+    }
+
+
+}

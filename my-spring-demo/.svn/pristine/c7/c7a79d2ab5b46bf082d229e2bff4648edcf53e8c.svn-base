@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isz.erp.house.mapper.ResidentialBuildingMapper">
+  <resultMap id="ResidentialBuildingBaseMap" type="com.isz.erp.facade.house.entity.ResidentialBuilding">
+    <id column="building_id" property="building_id"/>
+    <result column="residential_id" property="residential_id"/>
+    <result column="building_name" property="building_name"/>
+    <result column="suffix" property="suffix"/>
+    <result column="ground_floors" property="ground_floors"/>
+    <result column="underground_floors" property="underground_floors"/>
+    <result column="housing_type" property="housing_type"/>
+    <result column="have_elevator" property="have_elevator"/>
+    <result column="deleted" property="deleted"/>
+    <result column="house_role" property="house_role"/>
+    <result column="create_time" property="create_time"/>
+    <result column="create_uid" property="create_uid"/>
+    <result column="update_time" property="update_time"/>
+    <result column="update_uid" property="update_uid"/>
+    
+    <result column="area_name" property="area_name"/>
+    <result column="residential_name" property="residential_name"/>
+    <result column="address" property="address"/>
+    <result column="city_code" property="city_code"/>
+    <result column="city_name" property="city_name"/>
+    <result column="area_code" property="area_code"/>
+
+	  <result column="ladder_count" property="ladder_count"/>
+	  <result column="house_count" property="house_count"/>
+	   <result column="devhouse_count_audit" property="devhouse_count_audit"/>
+	  
+    <collection property="businessCircleList" ofType="com.isz.erp.facade.house.entity.BusinessCircle"
+	    column="residential_id" select="com.isz.erp.house.mapper.BusinessCircleMapper.selectBusidessCircleByResiId">
+	</collection>
+    
+ </resultMap>
+
+	<!-- 根据楼盘id判断出租房源是否用了栋座 -->
+	<select id="checkIsUseRedidentialBuilding" parameterType="java.lang.String" resultType="java.lang.Integer">
+	   SELECT count(*) FROM house a WHERE a.building_id = #{building_id} and a.deleted = 1
+	</select>
+    
+  	<!-- 查询栋座信息(分页) -->
+	<select id="searchResidentialBuildingList" parameterType="Map" resultType="com.isz.erp.facade.house.entity.ResidentialBuilding">
+	  	SELECT
+			t.building_id,
+			t.residential_id,
+			t.building_name,
+			t.suffix,
+			t.ground_floors,
+			t.underground_floors,
+			t.housing_type,
+			t.have_elevator,
+			t.deleted,
+			t.house_role,
+			t.create_time,
+			t.create_uid,
+			t.update_time,
+			t.update_uid,
+			t.ladder_count,
+			t.house_count
+			FROM
+			residential_building  t
+	    WHERE t.deleted = 0
+			<if test="building_id != null and building_id != ''"> and t.building_id = #{building_id} </if>
+			<if test="residential_id != null and residential_id != ''"> and t.residential_id = #{residential_id} </if>
+		 <if test="sort != null and sort !=''">order by ${sort}</if>
+		 <if test="order != null and order !=''">${order}</if>
+	</select>
+	
+	
+	<!-- 查询栋座数量 -->
+	<select id="countResidentialBuilding" parameterType="Map" resultType="int">
+	     SELECT count(t.building_id)
+			FROM
+			residential_building  t
+ 			WHERE t.deleted = 0
+			<if test="building_id != null and building_id != ''"> and t.building_id = #{building_id} </if>
+			<if test="residential_id != null and residential_id != ''"> and t.residential_id = #{residential_id} </if>
+	</select>
+	
+	<!-- 保存楼盘 -->
+	<insert id="saveResidentialBuilding" parameterType="com.isz.erp.facade.house.entity.ResidentialBuilding" keyProperty="building_id">
+        INSERT INTO residential_building (
+					building_id,
+					residential_id,
+					building_name,
+					suffix,
+					ground_floors,
+					underground_floors,
+					ladder_count,
+					house_count,
+					housing_type,
+					have_elevator,
+					deleted,
+			        house_role,
+					create_time,
+					create_uid,
+					update_time,
+					update_uid
+				)
+				VALUES
+					(
+						#{building_id},
+						#{residential_id},
+						#{building_name},
+						#{suffix},
+						#{ground_floors},
+						#{underground_floors},
+						#{ladder_count},
+						#{house_count},
+						#{housing_type},
+						#{have_elevator},
+						#{deleted},
+						#{house_role},
+						now(),
+						#{create_uid},
+						now(),
+						#{update_uid})
+  </insert>
+  
+  
+	<!-- 更新楼盘 -->
+	<insert id="updateResidentialBuilding" parameterType="com.isz.erp.facade.house.entity.ResidentialBuilding" keyProperty="building_id">
+        update residential_building  set 
+					building_id = #{building_id},
+					residential_id = #{residential_id},
+					building_name = #{building_name},
+					suffix = #{suffix},
+					ground_floors = #{ground_floors},
+					underground_floors = #{underground_floors},
+					housing_type = #{housing_type},
+					have_elevator = #{have_elevator},
+			        house_role = #{house_role},
+					update_time = now(),
+					update_uid = #{update_uid},
+					ladder_count = #{ladder_count},
+					house_count = #{house_count}
+					where building_id = #{building_id}
+  </insert>
+  
+
+  <!-- 删除栋座 -->
+  <update id="deleteResidentialBuilding4Update" parameterType="java.util.Map">
+      UPDATE residential_building s SET s.deleted=1 , s.update_uid = #{update_uid}, s.update_time = now() WHERE s.building_id = #{building_id}
+  </update>
+     <!-- 删除楼盘下房号 -->
+  <delete id="deleteResidentialBuildingHouseNo" parameterType="java.util.Map">
+      delete from residential_building_house_no where building_id=#{building_id}
+  </delete>
+  <!-- 删除楼盘 层 -->
+  <delete id="deleteResidentialBuildingFloor" parameterType="java.util.Map">
+      delete from residential_building_floor where building_id=#{building_id}
+  </delete>
+   <!-- 删除楼盘单元 -->
+  <delete id="deleteResidentialBuildingUnit" parameterType="java.util.Map">
+      delete from residential_building_unit where building_id=#{building_id}
+  </delete>
+  <!-- 查询楼盘详情 -->
+  <select id="selectResidentialBuildingDetail" parameterType="java.lang.String" resultMap="ResidentialBuildingBaseMap">
+      	SELECT
+      		r.address,
+     		r.residential_name,
+      		s.`name` as city_name,
+      		s.`code` as city_code,
+      		s2.`name` as area_name,
+      		s2.`code` as area_code,
+			t.building_id,
+			t.residential_id,
+			t.building_name,
+			t.suffix,
+			t.ground_floors,
+			t.underground_floors,
+			t.housing_type,
+			t.have_elevator,
+			t.deleted,
+			t.house_role,
+			t.create_time,
+			t.create_uid,
+			t.update_time,
+			t.update_uid,
+			t.ladder_count,
+			t.house_count,
+			GROUP_CONCAT(DISTINCT(sd.dep_name)) residential_department_name
+			FROM
+			residential_building  t
+      LEFT JOIN residential r ON t.residential_id = r.residential_id
+      LEFT JOIN residential_department rd ON rd.residential_id = r.residential_id
+      LEFT JOIN sys_department sd ON sd.dep_id = rd.did
+      LEFT JOIN sys_district s ON r.city_code = s.`code`
+      LEFT JOIN sys_district s2 ON r.area_code = s2.`code`
+      LEFT JOIN residential_business_circle m ON r.residential_id = m.residential_id
+      LEFT JOIN business_circle c ON m.business_circle_id = c.business_circle_id
+ 	  WHERE t.building_id = #{building_id}
+ 	  GROUP BY building_id
+  </select>
+  
+    	<!-- 查询栋座信息4出租房源(分页) -->
+	<select id="searchResidentialBuildingList4House" parameterType="Map" resultMap="ResidentialBuildingBaseMap">
+		SELECT
+     		r.residential_name,
+       		r.address,
+       		r.city_code,
+       		r.area_code,
+       		dis.`name` as area_name,
+			t.building_id,
+			t.residential_id,
+			t.building_name,
+			t.suffix,
+			t.ground_floors,
+			t.underground_floors,
+			t.housing_type,
+			t.have_elevator,
+			t.deleted,
+			t.house_role,
+			t.create_time,
+			t.create_uid,
+			t.update_time,
+			t.update_uid,
+			t.ladder_count,
+			t.house_count
+			FROM
+			residential_building  t
+            INNER JOIN residential r ON t.residential_id = r.residential_id
+            LEFT JOIN sys_district dis ON r.area_code = dis.code
+            LEFT JOIN residential_business_circle m ON r.residential_id = m.residential_id
+            LEFT JOIN business_circle c ON m.business_circle_id = c.business_circle_id
+	        WHERE t.deleted = 0 AND r.deleted = 0
+	        <if test="city_code_search != null and city_code_search != ''"> and r.city_code = #{city_code_search} </if>
+		    <if test="area_code_search != null and area_code_search != ''"> and r.area_code in (${area_code_search}) </if>
+			<if test="residential_name_search != null and residential_name_search != ''">
+				and (
+					r.residential_name like CONCAT('%','${residential_name_search}','%')
+					OR r.byname like CONCAT('%','${residential_name_search}','%')
+				)
+			</if>
+			<if test="building_name_search != null and building_name_search != ''"> and t.building_name like CONCAT('%','${building_name_search}','%' ) </if>
+			GROUP BY t.building_id
+		 <if test="null != sort and sort != ''">
+			ORDER BY ${sort}
+			<if test="null != order and order != ''">
+				${order}
+			</if>
+		</if>
+	</select>
+	
+	
+	<!-- 查询栋座信息(数量)4出租房源 -->
+	<select id="countResidentialBuilding4House" parameterType="Map" resultType="int">
+	     SELECT count(building_id) FROM
+     		(
+	     		SELECT
+			     	t.building_id
+					FROM
+					residential_building  t
+		            LEFT JOIN residential r ON t.residential_id = r.residential_id
+		            LEFT JOIN sys_district dis ON r.area_code = dis.code
+		            LEFT JOIN residential_business_circle m ON r.residential_id = m.residential_id
+		            LEFT JOIN business_circle c ON m.business_circle_id = c.business_circle_id
+					WHERE t.deleted = 0 AND r.deleted = 0
+					<if test="city_code_search != null and city_code_search != ''"> and r.city_code = #{city_code_search} </if>
+					<if test="area_code_search != null and area_code_search != ''"> and r.area_code in (${area_code_search}) </if>
+					<if test="residential_name_search != null and residential_name_search != ''">
+						and (
+							r.residential_name like CONCAT('%','${residential_name_search}','%')
+							OR r.byname like CONCAT('%','${residential_name_search}','%')
+						)
+					</if>
+					<if test="building_name_search != null and building_name_search != ''"> and t.building_name like CONCAT('%','${building_name_search}','%' ) </if>
+					GROUP BY t.building_id
+			) b_count
+	</select>
+	<select id="getCountbyResidential" ></select>
+
+	<!-- 栋座单元下拉列表 -->
+	<select id="searchResidentialBuildingListForSelect" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT tt.* FROM (
+			SELECT DISTINCT
+				rbu.unit_id id,
+				rbu.unit_id,
+				rb.building_id,
+				CONCAT_WS('',
+				rb.building_name,
+				CASE rb.suffix WHEN '无'
+				THEN ''
+				WHEN ''
+				THEN ''
+				WHEN NULL
+				THEN ''
+				WHEN 'NOT'
+				THEN ''
+				ELSE sdi.dict_value
+				END)building_name,
+				rbu.unit_name,
+				rb.suffix,
+				CONCAT_WS('',
+				rb.building_name,
+				CASE rb.suffix WHEN '无'
+				THEN ''
+				WHEN ''
+				THEN ''
+				WHEN NULL
+				THEN ''
+				WHEN 'NOT'
+				THEN ''
+				ELSE sdi.dict_value
+				END,
+				CASE rbu.unit_name WHEN '无'
+				THEN ''
+				WHEN ''
+				THEN ''
+				ELSE rbu.unit_name END
+				) building_unit,
+				rb.house_role,
+				(SELECT IFNULL(GROUP_CONCAT(sd.dep_id),'-1') FROM sys_department sd INNER JOIN residential_department rd ON sd.dep_id=rd.did WHERE rd.residential_id=r.residential_id) sort_index,
+				rbu.create_time
+			FROM residential_building_unit rbu
+			INNER JOIN residential_building rb ON rbu.building_id=rb.building_id
+			INNER JOIN residential r ON r.residential_id=rb.residential_id
+			LEFT JOIN residential_department rd1 ON rd1.residential_id=r.residential_id
+			LEFT JOIN sys_dict_item sdi ON sdi.dict_code='Suffix' AND sdi.dict_key=rb.suffix
+			WHERE r.deleted=0 AND rb.deleted=0 AND rb.residential_id=#{residential_id}
+			<if test="null != q_search and '' != q_search">
+				AND CONCAT_WS('',
+				rb.building_name,
+				CASE rb.suffix WHEN '无'
+				THEN ''
+				WHEN ''
+				THEN ''
+				WHEN NULL
+				THEN ''
+				WHEN 'NOT'
+				THEN ''
+				ELSE sdi.dict_value
+				END,
+				CASE rbu.unit_name WHEN '无'
+				THEN ''
+				WHEN ''
+				THEN ''
+				ELSE rbu.unit_name END
+				) LIKE CONCAT('%',#{q_search},'%')
+			</if>
+			<if test="null != city_code_search and '' != city_code_search">
+				AND r.city_code=#{city_code_search}
+			</if>
+		) tt
+
+		ORDER BY find_in_set(#{user_dep_id},tt.sort_index) DESC, tt.create_time DESC
+	</select>
+	<select id="countSearchResidentialBuildingForSelect" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+		COUNT(DISTINCT(rbu.unit_id))
+		FROM residential_building_unit rbu
+		INNER JOIN residential_building rb ON rbu.building_id=rb.building_id
+		INNER JOIN residential r ON r.residential_id=rb.residential_id
+		LEFT JOIN residential_department rd1 ON rd1.residential_id=r.residential_id
+		LEFT JOIN sys_dict_item sdi ON sdi.dict_code='Suffix' AND sdi.dict_key=rb.suffix
+		WHERE r.deleted=0 AND rb.deleted=0 AND rb.residential_id=#{residential_id}
+		<if test="null != q_search and '' != q_search">
+			AND CONCAT_WS('',
+			rb.building_name,
+			CASE rb.suffix WHEN '无'
+			THEN ''
+			WHEN ''
+			THEN ''
+			WHEN NULL
+			THEN ''
+			WHEN 'NOT'
+			THEN ''
+			ELSE sdi.dict_value
+			END,
+			CASE rbu.unit_name WHEN '无'
+			THEN ''
+			WHEN ''
+			THEN ''
+			ELSE rbu.unit_name END
+			) LIKE CONCAT('%',#{q_search},'%')
+		</if>
+		<if test="null != city_code_search and '' != city_code_search">
+			AND r.city_code=#{city_code_search}
+		</if>
+	</select>
+
+	<!-- 房号下拉列表 -->
+	<select id="searchResidentialBuildingHouseNoListForSelect" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT tt.*,h.house_code,hr.house_status,h.house_id,r.property_type,
+			(
+				SELECT
+					count(1)
+				FROM
+					house_develop hd 
+				WHERE
+					hd.city_code=#{city_code_search}
+				AND	hd.residential_name = #{residential_name}
+				AND hd.building_name = #{building_name}
+				AND hd.unit = #{unit_name}
+				AND hd.house_no = tt.house_no
+				AND hd.deleted = 0
+				AND hd.audit_status = 'PASS'
+			) AS devhouse_count_audit,
+			(SELECT COUNT(change_id) from house_audit_status_change hasc 
+			where hasc.house_id=h.house_id and hasc.deleted=0 and hasc.audit_status='NO_AUDIT') changenum
+		 FROM (SELECT
+			rbhn.house_no_id id,
+			rbhn.house_no_id,
+			rbhn.floor_id,
+			rbf.floor_name,
+			rbhn.house_no,
+			rbhn.unit_id,
+			rbhn.building_id
+		FROM residential_building_house_no rbhn
+		INNER JOIN residential_building_floor rbf ON rbf.floor_id=rbhn.floor_id
+		WHERE rbhn.building_id=#{building_id}
+			<if test="null != unit_id and '' != unit_id">
+				AND rbhn.unit_id=#{unit_id}
+			</if>
+			<if test="null != q_search and '' != q_search">
+				AND rbhn.house_no LIKE CONCAT(#{q_search},'%')
+			</if>
+			limit ${begin_num},${end_num}
+		) tt
+		INNER JOIN residential_building_unit rbu ON rbu.unit_id=tt.unit_id
+		INNER JOIN residential_building rb ON rb.building_id=tt.building_id
+		INNER JOIN residential r ON r.residential_id=rb.residential_id
+		LEFT JOIN house h ON h.residential_id=r.residential_id AND h.building_id=rb.building_id 
+		AND h.city_code=r.city_code AND h.unit=rbu.unit_name AND h.house_no=tt.house_no AND h.deleted=0
+		LEFT JOIN house_rent hr ON hr.house_id=h.house_id 
+		ORDER BY tt.floor_name ASC, tt.house_no ASC
+	</select>
+	<select id="countSearchResidentialBuildingHouseNoForSelect" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+		COUNT(rbhn.house_no_id)
+		FROM residential_building_house_no rbhn
+		INNER JOIN residential_building_floor rbf ON rbf.floor_id=rbhn.floor_id
+		WHERE rbhn.house_no_id IS NOT NULL AND rbhn.building_id=#{building_id}
+		<if test="null != unit_id and '' != unit_id">
+			AND rbhn.unit_id=#{unit_id}
+		</if>
+		<if test="null != q_search and '' != q_search">
+			AND rbhn.house_no LIKE CONCAT(#{q_search},'%')
+		</if>
+	</select>
+	
+	<select id="selectByName" parameterType="java.util.Map" resultType="com.isz.erp.facade.house.entity.ResidentialBuilding">
+		SELECT * FROM residential_building WHERE residential_id=#{residential_id} AND building_name=#{building_name} 
+		and deleted=0 LIMIT 1
+	</select>
+</mapper>

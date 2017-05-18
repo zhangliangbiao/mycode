@@ -1,0 +1,30 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.ResidentialImg;
+
+/** 
+ * @author WangShuo * 
+ * @date 创建时间：2016年1月12日 下午7:05:42 * 
+ * @version 1.0 * 
+ * @instruction 说明：
+ */
+public interface ResidentialImgMapper extends Mapper<ResidentialImg>{
+	
+	/**
+	 * 保存商圈关系表
+	 * @param taResidential
+	 * @return
+	 */
+	public Integer saveResidentialImg(List<ResidentialImg> list);
+	
+	/**
+	 * 根据楼盘id删除楼盘和商圈关系
+	 * @param residential_id
+	 * @return
+	 */
+	public Integer deleteImgByPremisesId(String residential_id);
+
+}

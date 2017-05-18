@@ -1,0 +1,39 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseRoomConfiguration;
+
+/**
+ * 楼盘房间配置
+ *
+ * @author lws * luwenshan@ishangzu.com
+ * @version 1.0 *
+ * @date 创建时间：2016年1月28日 下午4:46:08
+ * @instruction 说明：
+ */
+public interface HouseRoomConfigurationMapper extends Mapper<HouseRoomConfiguration> {
+
+    public List<HouseRoomConfiguration> selectByRoomId(String roomId);
+
+    public void deleteByHouseId(Integer house_id);
+
+    public void saveHouseRoomConfiguration(List<HouseRoomConfiguration> houseRoomConfigurationList);
+
+    public void deleteByFitmentId(String fitment_id);
+
+    public void deleteByHouseIdAndRoomId(Map<String, Object> pageData);
+
+    public List<HouseRoomConfiguration> selectByHouseId(Integer house_id);
+
+    public List<HouseRoomConfiguration> selectRoomByHouseId(String house_id);
+
+    public List<HouseRoomConfiguration> selectPublicByHouseId(String house_id);
+
+    public void deleteByRoomIds(Map<String, Object> roomIdsMap);
+
+    public List<HouseRoomConfiguration> selectByFitmentRoomId(String fitment_room_id);
+
+}

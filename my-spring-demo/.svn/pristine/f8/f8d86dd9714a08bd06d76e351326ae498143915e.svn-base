@@ -1,0 +1,78 @@
+package com.isz.erp.house.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import com.isz.erp.comm.mybatis.mapper.Mapper;
+import com.isz.erp.facade.house.entity.HouseImg;
+
+/**
+ * 房屋图片Mapper
+ * 
+ * @author SZP * zhipenglees@gmail.com
+ * @date 创建时间：2016年1月15日 下午12:32:19 *
+ * @version 1.0 *
+ * @instruction 说明：房屋图片Mapper
+ */
+public interface HouseImgMapper extends Mapper<HouseImg> {
+
+	/**
+	 * 保存房屋图片信息
+	 * 
+	 * @param listSave
+	 */
+	public void saveHouseImg(List<HouseImg> listSave);
+
+	/**
+	 * 删除当前房屋的所有图片信息
+	 * 
+	 * @param house_id
+	 */
+	public void deleteByHouseId(String house_id);
+
+	/**
+	 * 新增单个图片
+	 * 
+	 * @param houseImg
+	 */
+	public void insertHouseImg(HouseImg houseImg);
+
+	/**
+	 * 删除单个图片
+	 * 
+	 * @param house_img_id
+	 */
+	public void deleteByHouseImgId(String house_img_id);
+
+	/**
+	 * 符合条件的房屋图片列表
+	 * 
+	 * @param data
+	 * @return List<TtHouseImg>
+	 */
+	public List<HouseImg> searchHouseImgList(Map<String, Object> data);
+
+	/**
+	 * 符合条件的房屋图片列表记录总数
+	 * 
+	 * @param data
+	 * @return Integer
+	 */
+	public Integer countSearchHouseImg(Map<String, Object> data);
+
+	/**
+	 * 更新图片状态
+	 * 
+	 * @param ttHouseImg
+	 */
+	public void updateHouseImg(HouseImg ttHouseImg);
+
+	/**
+	 * 返回单个图片信息
+	 * 
+	 * @param house_img_id
+	 * @return TtHouseImg
+	 */
+	public HouseImg selectByHouseImgId(String house_img_id);
+
+}
