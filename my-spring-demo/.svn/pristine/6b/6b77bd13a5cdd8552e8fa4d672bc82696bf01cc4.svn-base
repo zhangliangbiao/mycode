@@ -1,8 +1,0 @@
-package com.isz.erp.house.mapper;
-
-/**
- * Created by shaozhipeng on 16/4/20.
- */
-public interface HouseGeneralContractVoMapper {
-    public Integer selectCountByHouseId(String house_id);
-}
