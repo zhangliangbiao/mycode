@@ -5,7 +5,7 @@
       xsi:schemaLocation="http://www.springframework.org/schema/beans
       http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
       <bean id="person" class="com.id.zlb.spring.vo.Person"
-      p:person_name="张良标"
+      p:person_name="sss"
       p:person_age="29"
       />
 </beans>
